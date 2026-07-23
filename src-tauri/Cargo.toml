@@ -1,0 +1,26 @@
+[package]
+name = "ratatoskr"
+version = "0.1.0"
+description = "Cliente SSH propio, rápido y bonito"
+authors = ["chefibecerra"]
+edition = "2021"
+
+[lib]
+name = "ratatoskr_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["macos-private-api"] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+russh = "0.62"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "net", "time", "io-util"] }
+uuid = { version = "1", features = ["v4"] }
+argon2 = "0.5"
+chacha20poly1305 = "0.10"
+base64 = "0.22"

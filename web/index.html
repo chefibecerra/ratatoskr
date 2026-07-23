@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ratatoskr — Cliente SSH rápido, bonito y cifrado</title>
+  <meta name="description" content="Cliente SSH para escritorio con vault cifrado zero-knowledge, verificación TOFU, temas y paleta de comandos. Hecho con Rust y Tauri." />
+  <link rel="icon" type="image/png" href="ratatoskr.png" />
+  <meta property="og:title" content="Ratatoskr — Cliente SSH" />
+  <meta property="og:description" content="Rápido, bonito y cifrado. La ardilla que corre por Yggdrasil." />
+  <meta property="og:image" content="ratatoskr.png" />
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --bg-raised: #131315;
+      --bg-chrome: #17171a;
+      --fg: #ececec;
+      --muted: #8a8a8e;
+      --faint: #5c5c60;
+      --border: rgba(255, 255, 255, 0.07);
+      --green: #34d399;
+      --yellow: #e5c07b;
+      --blue: #6ba6ff;
+      --red: #ff6b6b;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.55;
+      overflow-x: hidden;
+    }
+    .mono { font-family: "SF Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace; }
+    .wrap { max-width: 1020px; margin: 0 auto; padding: 0 24px; }
+
+    /* ---------- Nav ---------- */
+    nav {
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(14px);
+      background: rgba(10, 10, 11, 0.72);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 56px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--fg); }
+    .brand img { width: 26px; height: 26px; border-radius: 7px; }
+    .brand span { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+    .nav-links { display: flex; align-items: center; gap: 22px; }
+    .nav-links a {
+      font-size: 13px; color: var(--muted); text-decoration: none;
+      transition: color 0.15s ease;
+    }
+    .nav-links a:hover { color: var(--fg); }
+    .nav-links .nav-cta {
+      color: var(--bg); background: var(--fg);
+      padding: 6px 14px; border-radius: 999px; font-weight: 500;
+    }
+    .nav-links .nav-cta:hover { color: var(--bg); opacity: 0.9; }
+
+    /* ---------- Hero ---------- */
+    header { position: relative; padding: 88px 0 72px; text-align: center; }
+    .glow {
+      position: absolute; inset: -20% -10% auto; height: 480px;
+      background:
+        radial-gradient(420px 240px at 50% 20%, rgba(52, 211, 153, 0.07), transparent 70%),
+        radial-gradient(680px 340px at 50% 0%, rgba(255, 255, 255, 0.05), transparent 70%);
+      pointer-events: none;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 12px; color: var(--muted);
+      border: 1px solid var(--border); border-radius: 999px;
+      padding: 5px 13px; margin-bottom: 26px;
+      animation: rise 0.6s ease-out both;
+    }
+    .badge .pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: live 2.4s ease-in-out infinite; }
+    h1 {
+      font-size: clamp(38px, 6vw, 56px); font-weight: 275; letter-spacing: -0.025em;
+      animation: rise 0.6s ease-out 0.07s both;
+    }
+    .tagline {
+      margin: 14px auto 0; max-width: 560px;
+      font-size: 17px; color: var(--muted);
+      animation: rise 0.6s ease-out 0.14s both;
+    }
+    .cta { margin-top: 34px; animation: rise 0.6s ease-out 0.21s both; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--fg); color: var(--bg);
+      border: 0; border-radius: 999px; cursor: pointer;
+      padding: 13px 28px; font-size: 15px; font-weight: 500;
+      text-decoration: none;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn:active { transform: scale(0.97); }
+    .cta-sub { margin-top: 13px; font-size: 12.5px; color: var(--muted); }
+    .cta-sub a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+    .cta-sub a:hover { color: var(--fg); }
+
+    /* ---------- Mockup de la app ---------- */
+    .app {
+      margin: 64px auto 0; max-width: 860px; text-align: left;
+      background: var(--bg-chrome); border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+      box-shadow: 0 40px 90px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.03);
+      animation: rise 0.8s ease-out 0.3s both;
+      font-size: 12.5px;
+    }
+    .app-titlebar {
+      display: flex; align-items: center; gap: 14px;
+      height: 42px; padding: 0 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .traffic { display: flex; gap: 7px; }
+    .traffic span { width: 11px; height: 11px; border-radius: 50%; }
+    .traffic .r { background: #ff5f57; } .traffic .y { background: #febc2e; } .traffic .g { background: #28c840; }
+    .app-tab {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(255, 255, 255, 0.07); border-radius: 7px;
+      padding: 5px 12px; color: var(--fg);
+    }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: live 2.4s ease-in-out infinite; }
+    .app-body { display: flex; min-height: 380px; }
+    .app-rail {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      width: 44px; padding-top: 10px; border-right: 1px solid var(--border);
+    }
+    .rail-item {
+      width: 30px; height: 30px; border-radius: 8px;
+      display: grid; place-items: center; color: var(--faint);
+    }
+    .rail-item.active { background: rgba(255, 255, 255, 0.08); color: var(--fg); }
+    .rail-item svg { width: 15px; height: 15px; }
+    .app-side {
+      width: 190px; border-right: 1px solid var(--border);
+      padding: 10px; flex-shrink: 0;
+    }
+    .side-search {
+      background: rgba(255, 255, 255, 0.05); border-radius: 8px;
+      color: var(--faint); font-size: 11.5px; padding: 6px 10px; margin-bottom: 12px;
+    }
+    .side-label { font-size: 10px; color: var(--faint); margin: 0 4px 6px; }
+    .host-row { border-radius: 8px; padding: 7px 9px; }
+    .host-row.sel { background: rgba(255, 255, 255, 0.05); }
+    .host-row .name { display: flex; align-items: center; gap: 7px; font-weight: 500; font-size: 12.5px; }
+    .host-row .addr { color: var(--faint); font-size: 10.5px; margin-top: 1px; }
+    .app-term {
+      flex: 1; background: #0c0c0d; padding: 14px 16px;
+      display: flex; flex-direction: column; min-width: 0;
+    }
+    .term-lines { flex: 1; }
+    .term-lines .line { display: block; min-height: 1.55em; white-space: nowrap; overflow: hidden; }
+    .prompt { color: var(--green); }
+    .c-dim { color: var(--muted); }
+    .c-blue { color: var(--blue); }
+    .c-yellow { color: var(--yellow); }
+    .c-green { color: var(--green); }
+    .cursor {
+      display: inline-block; width: 7px; height: 1.05em;
+      background: var(--fg); vertical-align: text-bottom;
+      animation: blink 1s step-start infinite;
+    }
+    .term-status {
+      display: flex; justify-content: space-between;
+      color: var(--faint); font-size: 11px;
+      border-top: 1px solid var(--border); padding-top: 7px; margin-top: 10px;
+    }
+    .term-status .g { color: var(--green); }
+
+    /* ---------- Secciones ---------- */
+    section { padding: 88px 0; border-top: 1px solid var(--border); }
+    .kicker {
+      font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--faint); text-align: center; margin-bottom: 10px;
+    }
+    h2 { font-size: 26px; font-weight: 350; letter-spacing: -0.015em; text-align: center; margin-bottom: 40px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+    .card {
+      background: var(--bg-raised); border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px 22px;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+    }
+    .card:hover { border-color: rgba(255, 255, 255, 0.16); transform: translateY(-2px); }
+    .card .icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border);
+      display: grid; place-items: center; margin-bottom: 14px;
+    }
+    .card .icon svg { width: 15px; height: 15px; color: var(--fg); }
+    .card h3 { font-size: 14.5px; font-weight: 600; margin-bottom: 6px; }
+    .card p { font-size: 13px; color: var(--muted); }
+
+    /* ---------- Atajos ---------- */
+    .keys-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px; max-width: 880px; margin: 0 auto;
+    }
+    .key-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: var(--bg-raised); border: 1px solid var(--border);
+      border-radius: 11px; padding: 12px 16px; font-size: 13px; color: var(--muted);
+    }
+    kbd {
+      font-family: "SF Mono", ui-monospace, monospace; font-size: 11.5px;
+      color: var(--fg); background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border); border-bottom-width: 2px;
+      border-radius: 6px; padding: 3px 8px; white-space: nowrap;
+    }
+
+    /* ---------- Seguridad ---------- */
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+    .step {
+      background: var(--bg-raised); border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px 22px;
+    }
+    .step .num {
+      font-family: "SF Mono", ui-monospace, monospace;
+      font-size: 12px; color: var(--green); margin-bottom: 12px; display: block;
+    }
+    .step h3 { font-size: 14.5px; font-weight: 600; margin-bottom: 6px; }
+    .step p { font-size: 13px; color: var(--muted); }
+    .security-note {
+      margin: 28px auto 0; max-width: 640px; text-align: center;
+      font-size: 13px; color: var(--muted);
+    }
+    .security-note strong { color: var(--fg); font-weight: 500; }
+
+    /* ---------- Descargas ---------- */
+    .platforms { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .platform {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid var(--border); border-radius: 11px;
+      padding: 12px 20px; font-size: 13.5px; color: var(--fg);
+      text-decoration: none; background: var(--bg-raised);
+      transition: border-color 0.2s ease, transform 0.15s ease;
+    }
+    .platform:hover { border-color: rgba(255, 255, 255, 0.18); }
+    .platform:active { transform: scale(0.97); }
+    .platform .dim { font-size: 11.5px; color: var(--faint); }
+
+    footer {
+      padding: 44px 0 60px; border-top: 1px solid var(--border);
+      text-align: center; font-size: 12.5px; color: var(--faint);
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--fg); }
+
+    /* ---------- Animaciones ---------- */
+    @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes blink { 50% { opacity: 0; } }
+    @keyframes live {
+      0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.45); }
+      70%, 100% { box-shadow: 0 0 0 5px rgba(52, 211, 153, 0); }
+    }
+    .reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+    @media (max-width: 640px) {
+      .app-side { display: none; }
+      .nav-links a:not(.nav-cta) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="wrap nav-inner">
+      <a class="brand" href="#">
+        <img src="ratatoskr.png" alt="" />
+        <span>Ratatoskr</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Características</a>
+        <a href="#atajos">Atajos</a>
+        <a href="#seguridad">Seguridad</a>
+        <a href="#plataformas" class="nav-cta">Descargar</a>
+      </div>
+    </div>
+  </nav>
+
+  <header>
+    <div class="glow"></div>
+    <div class="wrap">
+      <span class="badge"><span class="pulse-dot"></span> Open source · Rust + Tauri</span>
+      <h1>El SSH que querías tener</h1>
+      <p class="tagline">Rápido, minimalista y cifrado de extremo a extremo. La ardilla que corre por Yggdrasil llevando mensajes entre los reinos.</p>
+
+      <div class="cta">
+        <a class="btn" id="download-btn" href="#plataformas"><span id="download-label">Descargar</span></a>
+        <p class="cta-sub"><span id="detected-os"></span><a href="#plataformas">Otras plataformas</a></p>
+      </div>
+
+      <!-- Mockup de la app: HTML/CSS puro, sin capturas -->
+      <div class="app mono">
+        <div class="app-titlebar">
+          <div class="traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+          <span class="app-tab"><span class="live-dot"></span> bkz</span>
+        </div>
+        <div class="app-body">
+          <div class="app-rail">
+            <span class="rail-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/></svg></span>
+            <span class="rail-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8 2 2-2 2m-3-1 2 2"/></svg></span>
+            <span class="rail-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg></span>
+            <span class="rail-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg></span>
+          </div>
+          <div class="app-side" style="font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;">
+            <div class="side-search">Buscar</div>
+            <p class="side-label">HOMELAB</p>
+            <div class="host-row sel">
+              <span class="name">bkz <span class="live-dot"></span></span>
+              <span class="addr mono">root@203.0.113.10</span>
+            </div>
+            <div class="host-row">
+              <span class="name">proxmox</span>
+              <span class="addr mono">root@203.0.113.2</span>
+            </div>
+            <div class="host-row">
+              <span class="name">pihole</span>
+              <span class="addr mono">admin@203.0.113.5</span>
+            </div>
+          </div>
+          <div class="app-term">
+            <div class="term-lines" id="term-lines">
+              <span class="line"><span class="prompt">❯</span> <span id="typed"></span><span class="cursor"></span></span>
+            </div>
+            <div class="term-status">
+              <span><span class="g">1:bash*</span></span>
+              <span>ubuntu-8gb · 42ms</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section id="features">
+    <div class="wrap">
+      <p class="kicker reveal">Características</p>
+      <h2 class="reveal">Sin cuentas de terceros. Sin texto plano. Sin fricción.</h2>
+      <div class="grid">
+        <div class="card reveal">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+          <h3>Vault cifrado zero-knowledge</h3>
+          <p>Argon2id + ChaCha20-Poly1305. Tus contraseñas y claves nunca salen del dispositivo sin cifrar. Auto-bloqueo por inactividad.</p>
+        </div>
+        <div class="card reveal">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="m9 12 2 2 4-4"/></svg></span>
+          <h3>Verificación TOFU</h3>
+          <p>La clave de cada servidor se registra en la primera conexión y se verifica en las siguientes. Si cambia, la conexión se rechaza.</p>
+        </div>
+        <div class="card reveal">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></span>
+          <h3>Rápido de verdad</h3>
+          <p>Rust + russh + eventos binarios sin serialización JSON: la latencia tecla → pantalla es la prioridad número uno.</p>
+        </div>
+        <div class="card reveal">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg></span>
+          <h3>tmux, vim y compañía</h3>
+          <p>PTY real con xterm-256color, truecolor, ratón, resize y ⌥ como Meta. Todo lo que corre en un terminal serio, corre aquí.</p>
+        </div>
+        <div class="card reveal">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8 2 2-2 2m-3-1 2 2"/></svg></span>
+          <h3>Claves y fragmentos</h3>
+          <p>Detecta tus claves de ~/.ssh, guarda comandos frecuentes y ejecútalos en la sesión activa con un clic.</p>
+        </div>
+        <div class="card reveal">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M4.9 19.1l2.2-2.2M16.9 7.1l2.2-2.2"/></svg></span>
+          <h3>A tu gusto</h3>
+          <p>Cinco temas de terminal, opacidad con blur nativo de macOS, fuentes Nerd Font, estilo de cursor y tamaño configurables.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="atajos">
+    <div class="wrap">
+      <p class="kicker reveal">Para gente de teclado</p>
+      <h2 class="reveal">El ratón es opcional</h2>
+      <div class="keys-grid">
+        <div class="key-row reveal"><span>Conectar a un host</span><kbd>⌘T</kbd></div>
+        <div class="key-row reveal"><span>Paleta de comandos</span><kbd>⌘K</kbd></div>
+        <div class="key-row reveal"><span>Buscar en el terminal</span><kbd>⌘F</kbd></div>
+        <div class="key-row reveal"><span>Ir a la pestaña N</span><kbd>⌘1–9</kbd></div>
+        <div class="key-row reveal"><span>Ciclar pestañas</span><kbd>⌃Tab</kbd></div>
+        <div class="key-row reveal"><span>Cerrar sesión</span><kbd>⌘W</kbd></div>
+        <div class="key-row reveal"><span>Bloquear el vault</span><kbd>⌘L</kbd></div>
+        <div class="key-row reveal"><span>Preferencias</span><kbd>⌘,</kbd></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="seguridad">
+    <div class="wrap">
+      <p class="kicker reveal">Seguridad</p>
+      <h2 class="reveal">El servidor de sync es tonto a propósito</h2>
+      <div class="steps">
+        <div class="step reveal">
+          <span class="num">01</span>
+          <h3>Tu contraseña deriva la clave</h3>
+          <p>Argon2id convierte tu contraseña maestra en una clave de 256 bits. Nunca se guarda, nunca viaja.</p>
+        </div>
+        <div class="step reveal">
+          <span class="num">02</span>
+          <h3>Todo se cifra en tu equipo</h3>
+          <p>Hosts, contraseñas y fragmentos se sellan con ChaCha20-Poly1305 en un único archivo autenticado.</p>
+        </div>
+        <div class="step reveal">
+          <span class="num">03</span>
+          <h3>Solo viaja el blob</h3>
+          <p>Exporta o sincroniza el archivo cifrado. Quien lo intercepte tiene exactamente eso: un blob opaco.</p>
+        </div>
+      </div>
+      <p class="security-note reveal">
+        <strong>Regla de oro:</strong> la contraseña maestra y las claves privadas nunca salen del dispositivo sin cifrar.
+      </p>
+    </div>
+  </section>
+
+  <section id="plataformas">
+    <div class="wrap">
+      <p class="kicker reveal">Descargas</p>
+      <h2 class="reveal">Elige tu plataforma</h2>
+      <div class="platforms reveal" id="platform-list">
+        <a class="platform" data-os="mac" href="#">macOS <span class="dim">.dmg</span></a>
+        <a class="platform" data-os="windows" href="#">Windows <span class="dim">instalador</span></a>
+        <a class="platform" data-os="linux" href="#">Linux <span class="dim">AppImage</span></a>
+        <a class="platform" data-os="linux-deb" href="#">Linux <span class="dim">.deb</span></a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <p>Hecho con Rust, Tauri y respeto por tu latencia · <a id="repo-link" href="#">Código en GitHub</a></p>
+    </div>
+  </footer>
+
+  <script>
+    // Ajusta esto cuando el repositorio esté publicado en GitHub.
+    const GITHUB_REPO = "chefibecerra/ratatoskr";
+    const RELEASES_URL = `https://github.com/${GITHUB_REPO}/releases`;
+    const API_LATEST = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
+
+    document.getElementById("repo-link").href = `https://github.com/${GITHUB_REPO}`;
+
+    // ---------- Detección de sistema operativo ----------
+    const ua = navigator.userAgent;
+    const os = /Mac/i.test(ua) ? "mac"
+      : /Win/i.test(ua) ? "windows"
+      : /Linux|X11/i.test(ua) ? "linux"
+      : null;
+    const OS_LABEL = { mac: "macOS", windows: "Windows", linux: "Linux" };
+
+    const MATCHERS = {
+      mac: (n) => /\.dmg$/i.test(n),
+      windows: (n) => /-setup\.exe$|\.msi$/i.test(n),
+      linux: (n) => /\.AppImage$/i.test(n),
+      "linux-deb": (n) => /\.deb$/i.test(n),
+    };
+
+    function pickAsset(assets, key) {
+      const candidates = assets.filter((a) => MATCHERS[key](a.name));
+      if (candidates.length === 0) return null;
+      if (key === "mac") {
+        return candidates.find((a) => /aarch64|arm64/i.test(a.name)) ?? candidates[0];
+      }
+      return candidates[0];
+    }
+
+    async function wireDownloads() {
+      const btn = document.getElementById("download-btn");
+      const label = document.getElementById("download-label");
+      const detected = document.getElementById("detected-os");
+      if (os) label.textContent = `Descargar para ${OS_LABEL[os]}`;
+
+      try {
+        const res = await fetch(API_LATEST);
+        if (!res.ok) throw new Error(String(res.status));
+        const release = await res.json();
+        const assets = release.assets ?? [];
+        for (const link of document.querySelectorAll("[data-os]")) {
+          const asset = pickAsset(assets, link.dataset.os);
+          link.href = asset ? asset.browser_download_url : RELEASES_URL;
+        }
+        if (os) {
+          const asset = pickAsset(assets, os);
+          if (asset) {
+            btn.href = asset.browser_download_url;
+            detected.textContent = `${release.tag_name} · ${OS_LABEL[os]} detectado · `;
+          }
+        }
+      } catch {
+        btn.href = RELEASES_URL;
+        for (const link of document.querySelectorAll("[data-os]")) {
+          link.href = RELEASES_URL;
+        }
+      }
+    }
+    wireDownloads();
+
+    // ---------- Sesión animada en el mockup ----------
+    const SCRIPT = [
+      { type: "cmd", text: "ssh bkz" },
+      { type: "out", html: '<span class="c-dim">conectado — root@bkz · ed25519 verificada</span>' },
+      { type: "cmd", text: "docker ps" },
+      { type: "out", html: '<span class="c-blue">CONTAINER</span>   <span class="c-blue">IMAGE</span>          <span class="c-blue">STATUS</span>' },
+      { type: "out", html: 'web         <span class="c-dim">nginx:latest</span>   <span class="c-green">Up 32 hours</span>' },
+      { type: "out", html: 'dns         <span class="c-dim">dnsmasq</span>        <span class="c-green">Up 3 months</span>' },
+      { type: "cmd", text: "tmux attach" },
+      { type: "out", html: '<span class="c-yellow">[sesión restaurada donde la dejaste]</span>' },
+    ];
+
+    const lines = document.getElementById("term-lines");
+    let step = 0;
+
+    function currentLine() { return lines.lastElementChild; }
+
+    function nextStep() {
+      if (step >= SCRIPT.length) return;
+      const item = SCRIPT[step];
+      step += 1;
+
+      if (item.type === "cmd") {
+        const target = currentLine().querySelector("span:nth-child(2)");
+        let i = 0;
+        (function typeChar() {
+          if (i <= item.text.length) {
+            target.textContent = item.text.slice(0, i);
+            i += 1;
+            setTimeout(typeChar, 45 + Math.random() * 65);
+          } else {
+            setTimeout(nextStep, 380);
+          }
+        })();
+      } else {
+        currentLine().querySelector(".cursor")?.remove();
+        const out = document.createElement("span");
+        out.className = "line";
+        out.innerHTML = item.html;
+        lines.appendChild(out);
+        const next = SCRIPT[step];
+        if (!next || next.type === "cmd") {
+          const promptLine = document.createElement("span");
+          promptLine.className = "line";
+          promptLine.innerHTML = '<span class="prompt">❯</span> <span></span><span class="cursor"></span>';
+          lines.appendChild(promptLine);
+        }
+        setTimeout(nextStep, next && next.type === "out" ? 90 : 650);
+      }
+    }
+    setTimeout(nextStep, 1000);
+
+    // ---------- Revelado al hacer scroll ----------
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      { threshold: 0.12 },
+    );
+    document.querySelectorAll(".reveal").forEach((el, i) => {
+      el.style.transitionDelay = `${Math.min(i % 6, 4) * 60}ms`;
+      observer.observe(el);
+    });
+  </script>
+</body>
+</html>
