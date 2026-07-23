@@ -241,6 +241,11 @@
     .security-note strong { color: var(--fg); font-weight: 500; }
 
     /* ---------- Descargas ---------- */
+    .group-label {
+      text-align: center; font-size: 12px; color: var(--faint);
+      margin-bottom: 12px; letter-spacing: 0.04em;
+    }
+    #latest-tag { color: var(--faint); font-family: "SF Mono", ui-monospace, monospace; }
     .platforms { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
     .platform {
       display: inline-flex; align-items: center; gap: 8px;
@@ -298,7 +303,7 @@
   <header>
     <div class="glow"></div>
     <div class="wrap">
-      <span class="badge"><span class="pulse-dot"></span> Open source · Rust + Tauri</span>
+      <span class="badge"><span class="pulse-dot"></span> Open source · Rust + Tauri<span id="hero-version"></span></span>
       <h1>El SSH que querías tener</h1>
       <p class="tagline">Terminal, SFTP, túneles y bastiones en un cliente rápido, minimalista y cifrado de extremo a extremo. La ardilla que corre por Yggdrasil llevando mensajes entre los reinos.</p>
 
@@ -365,7 +370,7 @@
         <div class="card reveal">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg></span>
           <h3>SFTP integrado</h3>
-          <p>Explorador de archivos remoto: navega, sube y baja archivos, crea carpetas, renombra y elimina. Sin herramientas externas.</p>
+          <p>Explorador de archivos remoto: navega, sube, baja y edita archivos sin bajarlos, crea carpetas, renombra y elimina. Sin herramientas externas.</p>
         </div>
         <div class="card reveal">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="16" cy="18" r="2" fill="currentColor" stroke="none"/></svg></span>
@@ -454,13 +459,22 @@
 
   <section id="plataformas">
     <div class="wrap">
-      <p class="kicker reveal">Descargas</p>
+      <p class="kicker reveal">Descargas <span id="latest-tag"></span></p>
       <h2 class="reveal">Elige tu plataforma</h2>
-      <div class="platforms reveal" id="platform-list">
-        <a class="platform" data-os="mac" href="#">macOS <span class="dim">.dmg</span></a>
-        <a class="platform" data-os="windows" href="#">Windows <span class="dim">instalador</span></a>
-        <a class="platform" data-os="linux" href="#">Linux <span class="dim">AppImage</span></a>
-        <a class="platform" data-os="linux-deb" href="#">Linux <span class="dim">.deb</span></a>
+      <div id="platform-list">
+        <p class="reveal group-label">Instaladores</p>
+        <div class="platforms reveal">
+          <a class="platform" data-os="mac" href="#">macOS <span class="dim">.dmg</span></a>
+          <a class="platform" data-os="windows" href="#">Windows <span class="dim">.exe</span></a>
+          <a class="platform" data-os="linux-deb" href="#">Linux <span class="dim">.deb</span></a>
+        </div>
+
+        <p class="reveal group-label" style="margin-top: 26px">Portables — sin instalar</p>
+        <div class="platforms reveal">
+          <a class="platform" data-os="mac-portable" href="#">macOS <span class="dim">.app</span></a>
+          <a class="platform" data-os="windows-portable" href="#">Windows <span class="dim">.exe portable</span></a>
+          <a class="platform" data-os="linux" href="#">Linux <span class="dim">AppImage</span></a>
+        </div>
       </div>
     </div>
   </section>
@@ -490,14 +504,18 @@
     const MATCHERS = {
       mac: (n) => /\.dmg$/i.test(n),
       windows: (n) => /-setup\.exe$|\.msi$/i.test(n),
-      linux: (n) => /\.AppImage$/i.test(n),
       "linux-deb": (n) => /\.deb$/i.test(n),
+      // portables
+      "mac-portable": (n) => /\.app\.tar\.gz$/i.test(n),
+      "windows-portable": (n) => /_portable\.exe$/i.test(n),
+      linux: (n) => /\.AppImage$/i.test(n),
     };
 
     function pickAsset(assets, key) {
       const candidates = assets.filter((a) => MATCHERS[key](a.name));
       if (candidates.length === 0) return null;
-      if (key === "mac") {
+      // en macOS prefiere Apple Silicon si hay ambas arquitecturas
+      if (key === "mac" || key === "mac-portable") {
         return candidates.find((a) => /aarch64|arm64/i.test(a.name)) ?? candidates[0];
       }
       return candidates[0];
@@ -514,6 +532,11 @@
         if (!res.ok) throw new Error(String(res.status));
         const release = await res.json();
         const assets = release.assets ?? [];
+        // versión visible en la sección de descargas y en el hero
+        const tagEl = document.getElementById("latest-tag");
+        if (tagEl) tagEl.textContent = `· ${release.tag_name}`;
+        const heroV = document.getElementById("hero-version");
+        if (heroV) heroV.textContent = ` · ${release.tag_name}`;
         for (const link of document.querySelectorAll("[data-os]")) {
           const asset = pickAsset(assets, link.dataset.os);
           link.href = asset ? asset.browser_download_url : RELEASES_URL;
