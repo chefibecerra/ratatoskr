@@ -4,6 +4,7 @@ import {
   ArrowUp,
   Download,
   File,
+  FilePlus,
   Folder,
   FolderPlus,
   Loader2,
@@ -35,6 +36,7 @@ import {
   sftpRemove,
   sftpRename,
   sftpUpload,
+  sftpWriteText,
   type SftpEntry,
 } from "@/lib/ipc";
 import { useSftp } from "@/stores/sftp";
@@ -195,6 +197,20 @@ export function SftpBrowser() {
     }
   };
 
+  const newFile = async () => {
+    if (!sftpId) return;
+    const name = window.prompt("Nombre del archivo");
+    if (!name) return;
+    const filePath = `${path.replace(/\/+$/, "")}/${name}`;
+    try {
+      await sftpWriteText(sftpId, filePath, "");
+      await refresh();
+      setEditingPath(filePath); // ábrelo en el editor
+    } catch (e) {
+      toast.error(String(e));
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && void close()}>
       <DialogContent className="flex h-[560px] flex-col gap-0 p-0 sm:max-w-2xl">
@@ -227,6 +243,15 @@ export function SftpBrowser() {
             title="Actualizar"
           >
             <RefreshCw className={cn("size-3.5", loading && "animate-spin")} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={() => void newFile()}
+            title="Nuevo archivo"
+          >
+            <FilePlus className="size-4" />
           </Button>
           <Button
             variant="ghost"

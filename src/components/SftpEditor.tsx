@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { oneDark } from "@codemirror/theme-one-dark";
+import CodeMirror from "@uiw/react-codemirror";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,8 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { sftpReadText, sftpWriteText } from "@/lib/ipc";
+import { languageFor } from "@/lib/editor-lang";
 
 interface SftpEditorProps {
   sftpId: string;
@@ -28,6 +30,12 @@ export function SftpEditor({ sftpId, path, onClose }: SftpEditorProps) {
 
   const name = path.split("/").pop() ?? path;
   const dirty = content !== original;
+
+  // extensiones de CodeMirror: lenguaje detectado + guardar con ⌘S
+  const extensions = useMemo(() => {
+    const lang = languageFor(name);
+    return lang ? [lang] : [];
+  }, [name]);
 
   useEffect(() => {
     let alive = true;
@@ -79,19 +87,31 @@ export function SftpEditor({ sftpId, path, onClose }: SftpEditorProps) {
             {error}
           </div>
         ) : (
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            spellCheck={false}
-            className="flex-1 resize-none rounded-none border-0 bg-terminal font-mono text-xs leading-5 focus-visible:ring-0"
-            onKeyDown={(e) => {
+          <div
+            className="min-h-0 flex-1 overflow-auto text-[13px]"
+            onKeyDownCapture={(e) => {
               // ⌘S guarda
               if ((e.metaKey || e.ctrlKey) && e.key === "s") {
                 e.preventDefault();
                 if (dirty) void save();
               }
             }}
-          />
+          >
+            <CodeMirror
+              value={content}
+              onChange={setContent}
+              theme={oneDark}
+              extensions={extensions}
+              height="100%"
+              style={{ height: "100%" }}
+              basicSetup={{
+                lineNumbers: true,
+                highlightActiveLine: true,
+                foldGutter: true,
+                autocompletion: false,
+              }}
+            />
+          </div>
         )}
 
         <DialogFooter className="border-t border-border px-4 py-2.5">
