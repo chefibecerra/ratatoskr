@@ -15,7 +15,6 @@ import { getTheme } from "@/lib/terminal-themes";
 import { useSessions, type Session } from "@/stores/sessions";
 import { fontStack, useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
-import { cn } from "@/lib/utils";
 
 function xtermTheme(themeId: string, transparent: boolean): ITheme {
   const colors = getTheme(themeId).colors;
@@ -51,10 +50,10 @@ export function TerminalView({ session, active }: TerminalViewProps) {
       cursorBlink: current.cursorBlink,
       cursorStyle: current.cursorStyle,
       fontSize: current.fontSize,
-      lineHeight: 1.25,
+      lineHeight: current.lineHeight,
       fontFamily: fontStack(current.fontFamily),
       theme: xtermTheme(current.themeId, transparent),
-      scrollback: 10_000,
+      scrollback: current.scrollback,
       allowTransparency: transparent,
       macOptionIsMeta: current.optionAsMeta,
     });
@@ -86,12 +85,18 @@ export function TerminalView({ session, active }: TerminalViewProps) {
     const dataSub = term.onData((data) => {
       void sshWrite(session.id, data).catch(() => {});
     });
+    const selectionSub = term.onSelectionChange(() => {
+      if (!useSettings.getState().copyOnSelect) return;
+      const selection = term.getSelection();
+      if (selection) void navigator.clipboard.writeText(selection);
+    });
     const observer = new ResizeObserver(safeFit);
     observer.observe(el);
 
     return () => {
       observer.disconnect();
       dataSub.dispose();
+      selectionSub.dispose();
       term.dispose();
       termRef.current = null;
       fitRef.current = null;
@@ -107,6 +112,8 @@ export function TerminalView({ session, active }: TerminalViewProps) {
     if (!term || !fit) return;
     term.options.fontFamily = fontStack(settings.fontFamily);
     term.options.fontSize = settings.fontSize;
+    term.options.lineHeight = settings.lineHeight;
+    term.options.scrollback = settings.scrollback;
     term.options.cursorStyle = settings.cursorStyle;
     term.options.cursorBlink = settings.cursorBlink;
     term.options.macOptionIsMeta = settings.optionAsMeta;
@@ -118,6 +125,8 @@ export function TerminalView({ session, active }: TerminalViewProps) {
   }, [
     settings.fontFamily,
     settings.fontSize,
+    settings.lineHeight,
+    settings.scrollback,
     settings.cursorStyle,
     settings.cursorBlink,
     settings.optionAsMeta,
@@ -158,7 +167,7 @@ export function TerminalView({ session, active }: TerminalViewProps) {
   }, [active, session.id, session.status]);
 
   return (
-    <div className={cn("absolute inset-0", active ? "block" : "hidden")}>
+    <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full bg-terminal px-3 py-2" />
 
       {active && findOpen && searchRef.current && (

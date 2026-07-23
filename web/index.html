@@ -292,7 +292,7 @@
     <div class="wrap">
       <span class="badge"><span class="pulse-dot"></span> Open source · Rust + Tauri</span>
       <h1>El SSH que querías tener</h1>
-      <p class="tagline">Rápido, minimalista y cifrado de extremo a extremo. La ardilla que corre por Yggdrasil llevando mensajes entre los reinos.</p>
+      <p class="tagline">Terminal, SFTP, túneles y bastiones en un cliente rápido, minimalista y cifrado de extremo a extremo. La ardilla que corre por Yggdrasil llevando mensajes entre los reinos.</p>
 
       <div class="cta">
         <a class="btn" id="download-btn" href="#plataformas"><span id="download-label">Descargar</span></a>
@@ -345,12 +345,32 @@
   <section id="features">
     <div class="wrap">
       <p class="kicker reveal">Características</p>
-      <h2 class="reveal">Sin cuentas de terceros. Sin texto plano. Sin fricción.</h2>
+      <h2 class="reveal">Todo lo que un cliente SSH profesional necesita.</h2>
       <div class="grid">
         <div class="card reveal">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
           <h3>Vault cifrado zero-knowledge</h3>
           <p>Argon2id + ChaCha20-Poly1305. Tus contraseñas y claves nunca salen del dispositivo sin cifrar. Auto-bloqueo por inactividad.</p>
+        </div>
+        <div class="card reveal">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg></span>
+          <h3>SFTP integrado</h3>
+          <p>Explorador de archivos remoto: navega, sube y baja archivos, crea carpetas, renombra y elimina. Sin herramientas externas.</p>
+        </div>
+        <div class="card reveal">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="16" cy="18" r="2" fill="currentColor" stroke="none"/></svg></span>
+          <h3>Túneles de puertos</h3>
+          <p>Reenvío de puertos con interfaz: llega a una base de datos o panel interno a través de SSH, sin memorizar <span class="mono">-L</span>.</p>
+        </div>
+        <div class="card reveal">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h6l2 2h8v10H4z"/><path d="m9 13 2 2 4-4"/></svg></span>
+          <h3>Jump host / bastión</h3>
+          <p>Conecta a través de una máquina puente, en cadena y con detección de ciclos. El acceso corporativo por bastión, resuelto.</p>
+        </div>
+        <div class="card reveal">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg></span>
+          <h3>Paneles divididos y broadcast</h3>
+          <p>Varias sesiones en una rejilla y un comando que se ejecuta en todas a la vez. Opera una flota de servidores de golpe.</p>
         </div>
         <div class="card reveal">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="m9 12 2 2 4-4"/></svg></span>
@@ -368,14 +388,9 @@
           <p>PTY real con xterm-256color, truecolor, ratón, resize y ⌥ como Meta. Todo lo que corre en un terminal serio, corre aquí.</p>
         </div>
         <div class="card reveal">
-          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="m11 12 8-8 2 2-2 2m-3-1 2 2"/></svg></span>
-          <h3>Claves y fragmentos</h3>
-          <p>Detecta tus claves de ~/.ssh, guarda comandos frecuentes y ejecútalos en la sesión activa con un clic.</p>
-        </div>
-        <div class="card reveal">
-          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M4.9 19.1l2.2-2.2M16.9 7.1l2.2-2.2"/></svg></span>
-          <h3>A tu gusto</h3>
-          <p>Cinco temas de terminal, opacidad con blur nativo de macOS, fuentes Nerd Font, estilo de cursor y tamaño configurables.</p>
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v6M12 3l-3 3M12 3l3 3"/><path d="M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/></svg></span>
+          <h3>Actualizaciones automáticas</h3>
+          <p>Firma criptográfica en cada versión. La app te avisa cuando hay una nueva y se actualiza sola con un clic.</p>
         </div>
       </div>
     </div>
@@ -388,6 +403,8 @@
       <div class="keys-grid">
         <div class="key-row reveal"><span>Conectar a un host</span><kbd>⌘T</kbd></div>
         <div class="key-row reveal"><span>Paleta de comandos</span><kbd>⌘K</kbd></div>
+        <div class="key-row reveal"><span>Dividir la vista</span><kbd>⌘D</kbd></div>
+        <div class="key-row reveal"><span>Broadcast a la flota</span><kbd>⌘⇧B</kbd></div>
         <div class="key-row reveal"><span>Buscar en el terminal</span><kbd>⌘F</kbd></div>
         <div class="key-row reveal"><span>Ir a la pestaña N</span><kbd>⌘1–9</kbd></div>
         <div class="key-row reveal"><span>Ciclar pestañas</span><kbd>⌃Tab</kbd></div>
@@ -401,7 +418,7 @@
   <section id="seguridad">
     <div class="wrap">
       <p class="kicker reveal">Seguridad</p>
-      <h2 class="reveal">El servidor de sync es tonto a propósito</h2>
+      <h2 class="reveal">Tus datos, cifrados en tu equipo</h2>
       <div class="steps">
         <div class="step reveal">
           <span class="num">01</span>
@@ -415,8 +432,8 @@
         </div>
         <div class="step reveal">
           <span class="num">03</span>
-          <h3>Solo viaja el blob</h3>
-          <p>Exporta o sincroniza el archivo cifrado. Quien lo intercepte tiene exactamente eso: un blob opaco.</p>
+          <h3>Tuyo para llevar</h3>
+          <p>Exporta el vault cifrado o comparte tus hosts sin contraseñas. Quien intercepte el vault tiene un blob opaco.</p>
         </div>
       </div>
       <p class="security-note reveal">

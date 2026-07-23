@@ -31,7 +31,7 @@ struct SessionClosed {
     reason: String,
 }
 
-struct ClientHandler {
+pub struct ClientHandler {
     app: AppHandle,
     /// "hostname:puerto" para buscar en known_hosts
     host_key: String,
@@ -102,48 +102,25 @@ fn expand_tilde(path: &str) -> PathBuf {
     PathBuf::from(path)
 }
 
-#[tauri::command]
-pub async fn ssh_connect(
-    app: AppHandle,
-    state: State<'_, SshState>,
-    session_id: String,
-    host: Host,
-    cols: u32,
-    rows: u32,
-    on_data: Channel<InvokeResponseBody>,
+/// Conexión autenticada. Guarda los handles de los bastiones intermedios:
+/// si se soltaran, los túneles subyacentes se cerrarían.
+pub struct Connection {
+    pub handle: client::Handle<ClientHandler>,
+    #[allow(dead_code)]
+    jumps: Vec<client::Handle<ClientHandler>>,
+}
+
+fn lookup_host(app: &AppHandle, id: &str) -> Option<Host> {
+    app.state::<crate::vault::VaultManager>()
+        .with_data(|d| d.hosts.iter().find(|h| h.id == id).cloned())
+        .ok()
+        .flatten()
+}
+
+async fn authenticate(
+    handle: &mut client::Handle<ClientHandler>,
+    host: &Host,
 ) -> Result<(), String> {
-    let config = Arc::new(client::Config {
-        keepalive_interval: Some(Duration::from_secs(15)),
-        ..Default::default()
-    });
-
-    let rejection = Arc::new(StdMutex::new(None::<String>));
-    let handler = ClientHandler {
-        app: app.clone(),
-        host_key: format!("{}:{}", host.hostname, host.port),
-        rejection: rejection.clone(),
-    };
-
-    let mut handle = match client::connect(
-        config,
-        (host.hostname.as_str(), host.port),
-        handler,
-    )
-    .await
-    {
-        Ok(handle) => handle,
-        Err(e) => {
-            // si el handler rechazó la clave, ese es el error real
-            let msg = rejection
-                .lock()
-                .unwrap()
-                .take()
-                .unwrap_or_else(|| format!("conexión fallida: {e}"));
-            crate::history::record(&app, &host, false, Some(msg.clone()));
-            return Err(msg);
-        }
-    };
-
     let authenticated = match &host.auth {
         AuthMethod::Password { password } => {
             let direct = handle
@@ -154,8 +131,7 @@ pub async fn ssh_connect(
             if direct {
                 true
             } else {
-                // Muchos servidores (PAM) solo aceptan keyboard-interactive.
-                keyboard_interactive(&mut handle, &host.username, password).await?
+                keyboard_interactive(handle, &host.username, password).await?
             }
         }
         AuthMethod::Key {
@@ -180,14 +156,131 @@ pub async fn ssh_connect(
         }
     };
     if !authenticated {
-        let msg = "autenticación rechazada: revisa usuario y credenciales \
-                   (el usuario distingue mayúsculas: root ≠ Root)"
-            .to_string();
-        crate::history::record(&app, &host, false, Some(msg.clone()));
-        return Err(msg);
+        return Err(format!(
+            "autenticación rechazada en {}: revisa usuario y credenciales \
+             (el usuario distingue mayúsculas: root ≠ Root)",
+            host.name
+        ));
+    }
+    Ok(())
+}
+
+/// Conecta a un salto: directo si `via` es None, o tunelizado a través del
+/// handle anterior (bastión) abriendo un canal direct-tcpip.
+async fn connect_hop(
+    app: &AppHandle,
+    config: Arc<client::Config>,
+    host: &Host,
+    via: Option<&client::Handle<ClientHandler>>,
+) -> Result<client::Handle<ClientHandler>, String> {
+    let rejection = Arc::new(StdMutex::new(None::<String>));
+    let handler = ClientHandler {
+        app: app.clone(),
+        host_key: format!("{}:{}", host.hostname, host.port),
+        rejection: rejection.clone(),
+    };
+
+    let mut handle = match via {
+        Some(prev) => {
+            let channel = prev
+                .channel_open_direct_tcpip(
+                    host.hostname.clone(),
+                    host.port as u32,
+                    "127.0.0.1",
+                    0,
+                )
+                .await
+                .map_err(|e| format!("no se pudo tunelizar hasta {}: {e}", host.name))?;
+            match client::connect_stream(config, channel.into_stream(), handler).await {
+                Ok(h) => h,
+                Err(e) => {
+                    return Err(rejection
+                        .lock()
+                        .unwrap()
+                        .take()
+                        .unwrap_or_else(|| format!("conexión fallida a {}: {e}", host.name)))
+                }
+            }
+        }
+        None => match client::connect(config, (host.hostname.as_str(), host.port), handler).await {
+            Ok(h) => h,
+            Err(e) => {
+                return Err(rejection
+                    .lock()
+                    .unwrap()
+                    .take()
+                    .unwrap_or_else(|| format!("conexión fallida a {}: {e}", host.name)))
+            }
+        },
+    };
+
+    authenticate(&mut handle, host).await?;
+    Ok(handle)
+}
+
+/// Conexión + autenticación + verificación TOFU, con soporte de bastiones
+/// (ProxyJump) en cadena. Compartida por el terminal, SFTP y los túneles.
+pub async fn connect_authenticated(
+    app: &AppHandle,
+    host: &Host,
+    keepalive_secs: u32,
+) -> Result<Connection, String> {
+    let config = Arc::new(client::Config {
+        keepalive_interval: (keepalive_secs > 0)
+            .then(|| Duration::from_secs(keepalive_secs as u64)),
+        ..Default::default()
+    });
+
+    // Resuelve la cadena de bastiones siguiendo jump_host_id hacia atrás.
+    let mut hops: Vec<Host> = Vec::new();
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut cursor = host.clone();
+    while let Some(jid) = cursor.jump_host_id.clone() {
+        if !seen.insert(jid.clone()) {
+            return Err("Ciclo de jump hosts detectado.".into());
+        }
+        let jump = lookup_host(app, &jid)
+            .ok_or_else(|| "El jump host configurado ya no existe.".to_string())?;
+        hops.push(jump.clone());
+        cursor = jump;
+    }
+    hops.reverse(); // del más externo (conexión directa) al más interno
+
+    let mut jumps: Vec<client::Handle<ClientHandler>> = Vec::new();
+    for hop in &hops {
+        let handle = connect_hop(app, config.clone(), hop, jumps.last()).await?;
+        jumps.push(handle);
     }
 
-    let mut channel = handle
+    let handle = connect_hop(app, config.clone(), host, jumps.last()).await?;
+    Ok(Connection { handle, jumps })
+}
+
+#[tauri::command]
+pub async fn ssh_connect(
+    app: AppHandle,
+    state: State<'_, SshState>,
+    session_id: String,
+    host: Host,
+    cols: u32,
+    rows: u32,
+    keepalive_secs: u32,
+    record_history: bool,
+    record_log: bool,
+    on_data: Channel<InvokeResponseBody>,
+) -> Result<(), String> {
+    let conn = match connect_authenticated(&app, &host, keepalive_secs).await {
+        Ok(conn) => conn,
+        Err(msg) => {
+            if record_history {
+                crate::history::record(&app, &host, false, Some(msg.clone()));
+            }
+            return Err(msg);
+        }
+    };
+
+    let mut channel = conn
+        .handle
         .channel_open_session()
         .await
         .map_err(|e| e.to_string())?;
@@ -207,7 +300,22 @@ pub async fn ssh_connect(
         .await
         .map_err(|e| e.to_string())?;
 
-    crate::history::record(&app, &host, true, None);
+    // Scripts de login: se envían como si el usuario los tecleara al abrir.
+    for cmd in &host.login_commands {
+        let _ = channel.data(format!("{cmd}\n").as_bytes()).await;
+    }
+
+    if record_history {
+        crate::history::record(&app, &host, true, None);
+    }
+
+    let started_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    let mut log = record_log
+        .then(|| crate::session_log::SessionLog::create(&app, &host.name, started_ms))
+        .flatten();
 
     let (tx, mut rx) = mpsc::channel::<SshOp>(64);
     state.sessions.lock().await.insert(session_id.clone(), tx);
@@ -225,15 +333,21 @@ pub async fn ssh_connect(
                         let _ = channel.window_change(c, r, 0, 0).await;
                     }
                     Some(SshOp::Close) | None => {
-                        let _ = handle.disconnect(Disconnect::ByApplication, "", "").await;
+                        let _ = conn.handle.disconnect(Disconnect::ByApplication, "", "").await;
                         break "cerrada por el usuario".to_string();
                     }
                 },
                 msg = channel.wait() => match msg {
                     Some(ChannelMsg::Data { data }) => {
+                        if let Some(log) = log.as_mut() {
+                            log.write(&data);
+                        }
                         let _ = on_data.send(InvokeResponseBody::Raw(data.to_vec()));
                     }
                     Some(ChannelMsg::ExtendedData { data, .. }) => {
+                        if let Some(log) = log.as_mut() {
+                            log.write(&data);
+                        }
                         let _ = on_data.send(InvokeResponseBody::Raw(data.to_vec()));
                     }
                     Some(ChannelMsg::ExitStatus { exit_status }) => {

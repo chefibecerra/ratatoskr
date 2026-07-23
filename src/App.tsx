@@ -1,27 +1,28 @@
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 
+import { BroadcastBar } from "@/components/BroadcastBar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ConfirmCloseDialog } from "@/components/ConfirmCloseDialog";
-import { EmptyState } from "@/components/EmptyState";
 import { HostForm } from "@/components/HostForm";
 import { LockScreen } from "@/components/LockScreen";
 import { SessionTabs } from "@/components/SessionTabs";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { SftpBrowser } from "@/components/SftpBrowser";
+import { TerminalArea } from "@/components/TerminalArea";
 import { SnippetForm } from "@/components/SnippetForm";
 import { Sidebar } from "@/components/Sidebar";
-import { TerminalView } from "@/components/TerminalView";
+import { Toaster } from "@/components/ui/sonner";
+import { UpdateBanner } from "@/components/UpdateBanner";
 import { useAutolock } from "@/hooks/use-autolock";
 import { useShortcuts } from "@/hooks/use-shortcuts";
 import { getTheme } from "@/lib/terminal-themes";
-import { useSessions } from "@/stores/sessions";
 import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
+import { useUpdater } from "@/stores/updater";
 import { useVault } from "@/stores/vault";
 
 function App() {
-  const sessions = useSessions((s) => s.sessions);
-  const activeId = useSessions((s) => s.activeId);
   const themeId = useSettings((s) => s.themeId);
   const opacity = useSettings((s) => s.opacity);
   const vaultStatus = useVault((s) => s.status);
@@ -34,6 +35,7 @@ function App() {
   // los datos se cargan al desbloquear el vault, no acá
   useEffect(() => {
     void checkVault();
+    void useUpdater.getState().checkOnStartup();
   }, [checkVault]);
 
   // "Preferencias…" del menú nativo de macOS
@@ -55,16 +57,8 @@ function App() {
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col">
         <SessionTabs />
-        <div className="relative flex-1 bg-terminal">
-          {sessions.map((session) => (
-            <TerminalView
-              key={session.id}
-              session={session}
-              active={session.id === activeId}
-            />
-          ))}
-          {sessions.length === 0 && <EmptyState />}
-        </div>
+        <BroadcastBar />
+        <TerminalArea />
       </main>
 
       <HostForm
@@ -77,10 +71,13 @@ function App() {
         onOpenChange={ui.setSettingsOpen}
       />
       <SnippetForm />
+      <SftpBrowser />
       <CommandPalette />
       <ConfirmCloseDialog />
+      <Toaster position="bottom-right" />
 
       {vaultStatus !== "unlocked" && <LockScreen />}
+      <UpdateBanner />
     </div>
   );
 }

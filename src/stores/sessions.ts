@@ -2,9 +2,12 @@ import { Channel } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 
-import { sshConnect, sshDisconnect } from "@/lib/ipc";
+import { sshConnect, sshDisconnect, sshWrite } from "@/lib/ipc";
+import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
 import type { Host, SessionStatus } from "@/types";
+
+const USER_CLOSED = "cerrada por el usuario";
 
 /**
  * Buffer entre el Channel de Tauri y la instancia de xterm: los primeros bytes
@@ -55,6 +58,9 @@ interface SessionsState {
   requestClose: (sessionId: string) => void;
   close: (sessionId: string) => Promise<void>;
   setActive: (sessionId: string) => void;
+  setTitle: (sessionId: string, title: string) => void;
+  /** envía un comando a todas las sesiones conectadas (broadcast de flota) */
+  broadcast: (command: string) => void;
 }
 
 function openChannel(stream: SessionStream): Channel<ArrayBuffer> {
@@ -74,6 +80,22 @@ export const useSessions = create<SessionsState>((set, get) => {
             : session,
         ),
       }));
+
+      // Caída no solicitada: un reintento automático. Si también falla,
+      // queda el overlay de error y el botón manual.
+      if (
+        payload.reason !== USER_CLOSED &&
+        useSettings.getState().autoReconnect
+      ) {
+        setTimeout(() => {
+          const session = get().sessions.find(
+            (s) => s.id === payload.session_id,
+          );
+          if (session && session.status === "closed") {
+            get().reconnect(payload.session_id);
+          }
+        }, 1500);
+      }
     },
   );
 
@@ -108,12 +130,17 @@ export const useSessions = create<SessionsState>((set, get) => {
       }
       patch(sessionId, { starting: true });
 
+      const { keepaliveSecs, saveHistory, recordSessionLog } =
+        useSettings.getState();
       try {
         await sshConnect(
           sessionId,
           session.host,
           cols,
           rows,
+          keepaliveSecs,
+          saveHistory,
+          recordSessionLog,
           openChannel(session.stream),
         );
         patch(sessionId, { status: "connected", starting: false });
@@ -138,7 +165,7 @@ export const useSessions = create<SessionsState>((set, get) => {
     requestClose: (sessionId) => {
       const session = get().sessions.find((s) => s.id === sessionId);
       if (!session) return;
-      if (session.status === "connected") {
+      if (session.status === "connected" && useSettings.getState().confirmClose) {
         useUi.getState().setConfirmCloseSessionId(sessionId);
       } else {
         void get().close(sessionId);
@@ -161,5 +188,20 @@ export const useSessions = create<SessionsState>((set, get) => {
     },
 
     setActive: (sessionId) => set({ activeId: sessionId }),
+
+    setTitle: (sessionId, title) => {
+      const trimmed = title.trim();
+      if (!trimmed) return;
+      patch(sessionId, { title: trimmed });
+    },
+
+    broadcast: (command) => {
+      const line = command.endsWith("\n") ? command : command + "\n";
+      for (const session of get().sessions) {
+        if (session.status === "connected") {
+          void sshWrite(session.id, line).catch(() => {});
+        }
+      }
+    },
   };
 });

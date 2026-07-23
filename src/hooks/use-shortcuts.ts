@@ -15,6 +15,14 @@ export function useShortcuts() {
       const ui = useUi.getState();
       const sessions = useSessions.getState();
 
+      // ⌘⇧B alterna la barra de broadcast (envío a toda la flota)
+      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        const ui = useUi.getState();
+        ui.setBroadcastOpen(!ui.broadcastOpen);
+        return;
+      }
+
       if (e.metaKey && !e.shiftKey && !e.altKey && !e.ctrlKey) {
         switch (e.key) {
           // ⌘T y ⌘J replican Termius; ⌘K queda como alias.
@@ -41,6 +49,12 @@ export function useShortcuts() {
           case "l":
             e.preventDefault();
             void useVault.getState().lock();
+            return;
+          case "d":
+            if (sessions.sessions.length > 1) {
+              e.preventDefault();
+              ui.setSplitView(!ui.splitView);
+            }
             return;
           case "w":
             if (sessions.activeId) {

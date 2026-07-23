@@ -27,6 +27,12 @@ pub struct Host {
     pub tags: Vec<String>,
     #[serde(default)]
     pub group: Option<String>,
+    /// id de otro host que actúa de bastión (ProxyJump); None = conexión directa
+    #[serde(default)]
+    pub jump_host_id: Option<String>,
+    /// comandos ejecutados automáticamente al abrir la sesión
+    #[serde(default)]
+    pub login_commands: Vec<String>,
 }
 
 #[tauri::command]

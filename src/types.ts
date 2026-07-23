@@ -11,6 +11,8 @@ export interface Host {
   auth: AuthMethod;
   tags: string[];
   group: string | null;
+  jump_host_id: string | null;
+  login_commands: string[];
 }
 
 export type SessionStatus = "connecting" | "connected" | "closed" | "error";

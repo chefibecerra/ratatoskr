@@ -56,10 +56,10 @@ Cliente SSH propio, rápido y bonito. Alternativa personal a Termius: gestionar 
 - [x] Master password al abrir la app, auto-lock por inactividad
 - [x] Migrar el CRUD de hosts a leer/escribir el vault
 
-### Fase 3 — Sync
-- [ ] API mínima en un LXC del homelab: `PUT /vault`, `GET /vault`, versionado para detectar conflictos
-- [ ] Acceso remoto vía WireGuard (Bifrost) — sin exposición pública
-- [ ] Login: simple al principio (token propio); Supabase Auth solo si algún día se vende
+### Fase 3 — Sync (pendiente de definir)
+- [x] Base local: vault versionado (revisión monótona) + exportar/importar el blob cifrado
+- [ ] Decidir el transporte para uso en empresa: carpeta compartida/drive con el blob cifrado, o servicio propio
+- [ ] El backend (si lo hay) sigue siendo tonto: guarda blobs, compara revisiones, nada más
 
 ### Después (NO MVP)
 - SFTP / transferencia de archivos
@@ -70,4 +70,4 @@ Cliente SSH propio, rápido y bonito. Alternativa personal a Termius: gestionar 
 ## Decisiones abiertas
 
 - **¿Móvil en el alcance?** Tauri 2 compila a iOS/Android, pero duplica el trabajo de UI. Pendiente de decidir — no bloquea las fases 1-2.
-- **Sync self-hosted vs servicio**: arrancamos self-hosted en el homelab; revisar solo si se convierte en producto.
+- **Transporte del sync**: el uso es en empresa. El blob cifrado ya viaja por archivo (export/import); falta decidir si alcanza con una carpeta compartida o hace falta un servicio.

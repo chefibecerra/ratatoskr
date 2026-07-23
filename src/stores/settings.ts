@@ -11,8 +11,24 @@ export interface Settings {
   fontSize: number;
   cursorStyle: CursorStyle;
   cursorBlink: boolean;
+  /** líneas de scrollback del terminal */
+  scrollback: number;
+  /** interlineado del terminal */
+  lineHeight: number;
+  /** copia automáticamente el texto al seleccionarlo */
+  copyOnSelect: boolean;
   /** ⌥ envía secuencias Meta (M-) en lugar de caracteres especiales */
   optionAsMeta: boolean;
+  /** reintenta una vez cuando la conexión se corta sin que el usuario la cierre */
+  autoReconnect: boolean;
+  /** segundos entre keepalives SSH; 0 = desactivado */
+  keepaliveSecs: number;
+  /** pide confirmación antes de cerrar una sesión conectada */
+  confirmClose: boolean;
+  /** registra las conexiones en el historial */
+  saveHistory: boolean;
+  /** graba la salida del terminal a un archivo de registro */
+  recordSessionLog: boolean;
   /** minutos de inactividad antes de bloquear el vault; 0 = nunca */
   autoLockMinutes: number;
 }
@@ -44,7 +60,15 @@ export const useSettings = create<SettingsState>()(
       fontSize: 13,
       cursorStyle: "block",
       cursorBlink: true,
+      scrollback: 10_000,
+      lineHeight: 1.25,
+      copyOnSelect: false,
       optionAsMeta: true,
+      autoReconnect: true,
+      keepaliveSecs: 15,
+      confirmClose: true,
+      saveHistory: true,
+      recordSessionLog: false,
       autoLockMinutes: 15,
       update: (partial) => set(partial),
     }),

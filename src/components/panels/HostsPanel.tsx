@@ -1,7 +1,19 @@
 import { useMemo, useState } from "react";
-import { MoreHorizontal, Pencil, Search, Trash2 } from "lucide-react";
+import {
+  FileInput,
+  FolderOpen,
+  MoreHorizontal,
+  Pencil,
+  Search,
+  Server,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
 
+import { PanelEmpty } from "@/components/panels/PanelEmpty";
 import { Button } from "@/components/ui/button";
+import { readSshConfig } from "@/lib/ipc";
+import { useSftp } from "@/stores/sftp";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +31,7 @@ import type { Host } from "@/types";
 function HostRow({ host }: { host: Host }) {
   const connect = useSessions((s) => s.connect);
   const remove = useHosts((s) => s.remove);
+  const browseFiles = useSftp((s) => s.connect);
   const openHostForm = useUi((s) => s.openHostForm);
   const hasLiveSession = useSessions((s) =>
     s.sessions.some((x) => x.host.id === host.id && x.status === "connected"),
@@ -59,6 +72,9 @@ function HostRow({ host }: { host: Host }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => void browseFiles(host)}>
+            <FolderOpen className="size-3.5" /> Explorar archivos
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openHostForm(host)}>
             <Pencil className="size-3.5" /> Editar
           </DropdownMenuItem>
@@ -76,7 +92,52 @@ function HostRow({ host }: { host: Host }) {
 
 export function HostsPanel() {
   const hosts = useHosts((s) => s.hosts);
+  const save = useHosts((s) => s.save);
   const [query, setQuery] = useState("");
+  const [importing, setImporting] = useState(false);
+
+  const importFromSshConfig = async () => {
+    setImporting(true);
+    try {
+      const entries = await readSshConfig();
+      const existing = useHosts.getState().hosts;
+      const fresh = entries.filter(
+        (e) =>
+          !existing.some(
+            (h) =>
+              h.name === e.alias ||
+              (h.hostname === e.hostname && h.port === e.port),
+          ),
+      );
+      for (const entry of fresh) {
+        await save({
+          id: "",
+          name: entry.alias,
+          hostname: entry.hostname,
+          port: entry.port,
+          username: entry.user ?? "root",
+          auth: {
+            kind: "key",
+            key_path: entry.identity_file ?? "~/.ssh/id_ed25519",
+            passphrase: null,
+          },
+          tags: ["ssh-config"],
+          group: null,
+          jump_host_id: null,
+          login_commands: [],
+        });
+      }
+      toast.success(
+        fresh.length > 0
+          ? `${fresh.length} host${fresh.length === 1 ? "" : "s"} importados de ~/.ssh/config`
+          : "Nada nuevo que importar de ~/.ssh/config",
+      );
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const groups = useMemo(() => {
     const q = query.toLowerCase();
@@ -109,9 +170,16 @@ export function HostsPanel() {
 
       <ScrollArea className="min-h-0 flex-1 px-2">
         {hosts.length === 0 && (
-          <div className="px-3 py-10 text-center text-xs leading-5 text-muted-foreground">
-            Aún no hay hosts.
-          </div>
+          <PanelEmpty icon={Server} message="Aún no hay hosts. Crea el primero con el botón +.">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => useUi.getState().openHostForm(null)}
+            >
+              Nuevo host
+            </Button>
+          </PanelEmpty>
         )}
 
         {groups.map(([group, groupHosts]) => (
@@ -119,12 +187,27 @@ export function HostsPanel() {
             <p className="px-3 pt-1 pb-1 text-[11px] font-medium text-muted-foreground/60">
               {group}
             </p>
-            {groupHosts.map((host) => (
-              <HostRow key={host.id} host={host} />
-            ))}
+            <div className="stagger">
+              {groupHosts.map((host) => (
+                <HostRow key={host.id} host={host} />
+              ))}
+            </div>
           </div>
         ))}
       </ScrollArea>
+
+      <div className="border-t border-border px-2 py-1.5">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-full justify-start text-xs text-muted-foreground"
+          disabled={importing}
+          onClick={() => void importFromSshConfig()}
+        >
+          <FileInput className="size-3.5" />
+          {importing ? "Importando…" : "Importar de ~/.ssh/config"}
+        </Button>
+      </div>
     </div>
   );
 }

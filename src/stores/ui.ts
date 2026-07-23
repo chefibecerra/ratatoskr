@@ -6,6 +6,7 @@ export type SidebarSection =
   | "hosts"
   | "keys"
   | "snippets"
+  | "tunnels"
   | "known-hosts"
   | "history";
 
@@ -14,6 +15,9 @@ interface UiState {
   settingsOpen: boolean;
   paletteOpen: boolean;
   findOpen: boolean;
+  broadcastOpen: boolean;
+  /** rejilla con todas las sesiones a la vez en lugar de solo la activa */
+  splitView: boolean;
   hostFormOpen: boolean;
   editingHost: Host | null;
   snippetFormOpen: boolean;
@@ -24,6 +28,8 @@ interface UiState {
   setSettingsOpen: (open: boolean) => void;
   setPaletteOpen: (open: boolean) => void;
   setFindOpen: (open: boolean) => void;
+  setBroadcastOpen: (open: boolean) => void;
+  setSplitView: (split: boolean) => void;
   openHostForm: (host: Host | null) => void;
   setHostFormOpen: (open: boolean) => void;
   openSnippetForm: (snippet: Snippet | null) => void;
@@ -36,6 +42,8 @@ export const useUi = create<UiState>((set) => ({
   settingsOpen: false,
   paletteOpen: false,
   findOpen: false,
+  broadcastOpen: false,
+  splitView: false,
   hostFormOpen: false,
   editingHost: null,
   snippetFormOpen: false,
@@ -45,6 +53,8 @@ export const useUi = create<UiState>((set) => ({
   setSettingsOpen: (open) => set({ settingsOpen: open }),
   setPaletteOpen: (open) => set({ paletteOpen: open }),
   setFindOpen: (open) => set({ findOpen: open }),
+  setBroadcastOpen: (open) => set({ broadcastOpen: open }),
+  setSplitView: (split) => set({ splitView: split }),
   openHostForm: (host) => set({ hostFormOpen: true, editingHost: host }),
   setHostFormOpen: (open) =>
     set((s) => ({

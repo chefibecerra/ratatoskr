@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useHosts } from "@/stores/hosts";
 import { useLibrary } from "@/stores/library";
 import type { Host } from "@/types";
@@ -41,7 +42,11 @@ interface FormState {
   passphrase: string;
   tags: string;
   group: string;
+  jumpHostId: string;
+  loginCommands: string;
 }
+
+const NO_JUMP = "__none__";
 
 const EMPTY: FormState = {
   name: "",
@@ -54,6 +59,8 @@ const EMPTY: FormState = {
   passphrase: "",
   tags: "",
   group: "",
+  jumpHostId: NO_JUMP,
+  loginCommands: "",
 };
 
 function toForm(host: Host): FormState {
@@ -68,13 +75,18 @@ function toForm(host: Host): FormState {
     passphrase: host.auth.kind === "key" ? (host.auth.passphrase ?? "") : "",
     tags: host.tags.join(", "),
     group: host.group ?? "",
+    jumpHostId: host.jump_host_id ?? NO_JUMP,
+    loginCommands: host.login_commands.join("\n"),
   };
 }
 
 export function HostForm({ open, onOpenChange, host }: HostFormProps) {
   const save = useHosts((s) => s.save);
+  const allHosts = useHosts((s) => s.hosts);
   const keys = useLibrary((s) => s.keys);
   const loadKeys = useLibrary((s) => s.loadKeys);
+  // un host no puede ser su propio bastión
+  const jumpCandidates = allHosts.filter((h) => h.id !== host?.id);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [customKey, setCustomKey] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -125,6 +137,11 @@ export function HostForm({ open, onOpenChange, host }: HostFormProps) {
           .map((t) => t.trim())
           .filter(Boolean),
         group: form.group.trim() || null,
+        jump_host_id: form.jumpHostId === NO_JUMP ? null : form.jumpHostId,
+        login_commands: form.loginCommands
+          .split("\n")
+          .map((c) => c.trim())
+          .filter(Boolean),
       });
       onOpenChange(false);
     } catch (e) {
@@ -146,7 +163,8 @@ export function HostForm({ open, onOpenChange, host }: HostFormProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4">
+        <div className="grid max-h-[70vh] gap-4 overflow-y-auto px-0.5">
+
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
               <Label htmlFor="name">Nombre</Label>
@@ -294,6 +312,43 @@ export function HostForm({ open, onOpenChange, host }: HostFormProps) {
               value={form.tags}
               onChange={(e) => patch({ tags: e.target.value })}
             />
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label>Conectar a través de (bastión)</Label>
+            <Select
+              value={form.jumpHostId}
+              onValueChange={(v) => patch({ jumpHostId: v })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_JUMP}>Conexión directa</SelectItem>
+                {jumpCandidates.map((h) => (
+                  <SelectItem key={h.id} value={h.id}>
+                    {h.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Salta primero por otro host (bastión) antes de llegar a este.
+            </p>
+          </div>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor="login-commands">Comandos al conectar</Label>
+            <Textarea
+              id="login-commands"
+              placeholder={"cd /var/www\nsource .venv/bin/activate"}
+              className="min-h-16 font-mono text-xs"
+              value={form.loginCommands}
+              onChange={(e) => patch({ loginCommands: e.target.value })}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Uno por línea. Se ejecutan al abrir la sesión.
+            </p>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

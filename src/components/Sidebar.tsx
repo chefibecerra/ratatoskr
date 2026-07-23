@@ -1,6 +1,7 @@
 import {
   History,
   KeyRound,
+  Network,
   Plus,
   Server,
   Settings2,
@@ -13,6 +14,7 @@ import { HostsPanel } from "@/components/panels/HostsPanel";
 import { KeysPanel } from "@/components/panels/KeysPanel";
 import { KnownHostsPanel } from "@/components/panels/KnownHostsPanel";
 import { SnippetsPanel } from "@/components/panels/SnippetsPanel";
+import { TunnelsPanel } from "@/components/panels/TunnelsPanel";
 import { Button } from "@/components/ui/button";
 import { useUi, type SidebarSection } from "@/stores/ui";
 import { cn } from "@/lib/utils";
@@ -25,6 +27,7 @@ const SECTIONS: {
   { id: "hosts", label: "Hosts", icon: Server },
   { id: "keys", label: "Claves", icon: KeyRound },
   { id: "snippets", label: "Fragmentos", icon: SquareTerminal },
+  { id: "tunnels", label: "Túneles", icon: Network },
   { id: "known-hosts", label: "Servidores", icon: ShieldCheck },
   { id: "history", label: "Historial", icon: History },
 ];
@@ -105,6 +108,7 @@ export function Sidebar() {
           {section === "hosts" && <HostsPanel />}
           {section === "keys" && <KeysPanel />}
           {section === "snippets" && <SnippetsPanel />}
+          {section === "tunnels" && <TunnelsPanel />}
           {section === "known-hosts" && <KnownHostsPanel />}
           {section === "history" && <HistoryPanel />}
         </div>

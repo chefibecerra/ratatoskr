@@ -52,6 +52,14 @@ struct Unlocked {
     data: VaultData,
 }
 
+impl Drop for Unlocked {
+    fn drop(&mut self) {
+        // al bloquear, la clave no queda flotando en memoria liberada
+        use zeroize::Zeroize;
+        self.key.zeroize();
+    }
+}
+
 fn now_millis() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -63,6 +71,11 @@ fn now_millis() -> u64 {
 pub struct VaultManager(Mutex<Option<Unlocked>>);
 
 impl VaultManager {
+    /// Descarta la clave y los datos en claro de memoria.
+    pub fn lock_now(&self) {
+        *self.0.lock().unwrap() = None;
+    }
+
     pub fn with_data<R>(&self, f: impl FnOnce(&VaultData) -> R) -> Result<R, String> {
         match self.0.lock().unwrap().as_ref() {
             Some(u) => Ok(f(&u.data)),
