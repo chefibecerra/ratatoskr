@@ -12,6 +12,10 @@
 
 ---
 
+<div align="center">
+  <img src="docs/screenshot.png" alt="Ratatoskr en acción" width="820" />
+</div>
+
 Ratatoskr es un cliente SSH de escritorio para macOS, Windows y Linux. Terminal, SFTP,
 túneles y bastiones en una sola app, con un vault cifrado de extremo a extremo y una
 estética minimalista. Sin cuentas de terceros, sin telemetría, sin texto plano.
