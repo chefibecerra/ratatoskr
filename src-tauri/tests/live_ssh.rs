@@ -11,6 +11,7 @@
 use std::sync::Arc;
 
 use russh::client;
+use russh_sftp::client::SftpSession;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 const ADDR: (&str, u16) = ("127.0.0.1", 2222);
@@ -121,6 +122,15 @@ async fn connect<H: client::Handler + 'static>(handler: H) -> client::Handle<H> 
     handle
 }
 
+/// Escribe un archivo remoto igual que sftp.rs: create (CREATE|TRUNCATE|WRITE)
+/// + write_all + cierre limpio.
+async fn write_remote(sftp: &SftpSession, path: &str, data: &[u8]) {
+    let mut file = sftp.create(path).await.unwrap();
+    file.write_all(data).await.unwrap();
+    file.flush().await.unwrap();
+    file.shutdown().await.unwrap();
+}
+
 /// Lee un canal (exec) hasta el cierre y devuelve su salida como texto.
 async fn drain(channel: &mut russh::Channel<client::Msg>) -> String {
     let mut out = Vec::new();
@@ -184,6 +194,88 @@ async fn tunel_remoto_tcpip_forward() {
         .unwrap();
     let out = drain(&mut ch).await;
     assert!(out.contains("rat-forward-ok"), "cuerpo por -R: {out:?}");
+}
+
+#[tokio::test]
+#[ignore = "requiere el contenedor sshd en :2222"]
+async fn sftp_ciclo_completo() {
+    // Mismo flujo que sftp.rs: abrir subsistema SFTP con russh-sftp y ejercitar
+    // escribir, leer, listar, crear carpeta, renombrar y borrar.
+    let handle = connect(Trusting).await;
+    let channel = handle.channel_open_session().await.unwrap();
+    channel.request_subsystem(true, "sftp").await.unwrap();
+    let sftp = SftpSession::new(channel.into_stream()).await.unwrap();
+
+    let dir = "/home/tester";
+    let file = "/home/tester/rat_sftp.txt";
+    let content = "contenido de prueba Ratatoskr SFTP, algo largo\n";
+
+    // Crear archivo NUEVO + leer (como sftp_write_text / sftp_read_text). Debe
+    // usar create (CREATE|TRUNCATE|WRITE); con el write() pelado daría NoSuchFile.
+    write_remote(&sftp, file, content.as_bytes()).await;
+    let back = sftp.read(file).await.unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&back),
+        content,
+        "leer tras crear debe devolver lo mismo"
+    );
+
+    // TRUNCATE: reescribir con menos contenido no debe dejar restos del anterior.
+    let corto = "corto\n";
+    write_remote(&sftp, file, corto.as_bytes()).await;
+    let back_corto = sftp.read(file).await.unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&back_corto),
+        corto,
+        "reescribir más corto debe truncar, sin basura al final"
+    );
+
+    // read_dir lista el archivo (sftp_list)
+    let listado: Vec<String> = sftp
+        .read_dir(dir)
+        .await
+        .unwrap()
+        .map(|e| e.file_name())
+        .collect();
+    assert!(
+        listado.iter().any(|n| n == "rat_sftp.txt"),
+        "read_dir debe listar el archivo: {listado:?}"
+    );
+
+    // create_dir (sftp_mkdir)
+    let subdir = "/home/tester/rat_dir";
+    sftp.create_dir(subdir).await.unwrap();
+
+    // rename (sftp_rename)
+    let renamed = "/home/tester/rat_sftp_renombrado.txt";
+    sftp.rename(file, renamed).await.unwrap();
+    let tras_rename: Vec<String> = sftp
+        .read_dir(dir)
+        .await
+        .unwrap()
+        .map(|e| e.file_name())
+        .collect();
+    assert!(
+        tras_rename.iter().any(|n| n == "rat_sftp_renombrado.txt")
+            && !tras_rename.iter().any(|n| n == "rat_sftp.txt"),
+        "rename debe mover el archivo: {tras_rename:?}"
+    );
+
+    // remove_file + remove_dir (sftp_remove)
+    sftp.remove_file(renamed).await.unwrap();
+    sftp.remove_dir(subdir).await.unwrap();
+    let final_list: Vec<String> = sftp
+        .read_dir(dir)
+        .await
+        .unwrap()
+        .map(|e| e.file_name())
+        .collect();
+    assert!(
+        !final_list
+            .iter()
+            .any(|n| n == "rat_sftp_renombrado.txt" || n == "rat_dir"),
+        "tras borrar no debe quedar rastro: {final_list:?}"
+    );
 }
 
 #[tokio::test]

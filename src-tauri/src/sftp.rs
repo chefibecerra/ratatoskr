@@ -3,10 +3,23 @@ use std::collections::HashMap;
 use russh_sftp::client::SftpSession;
 use serde::Serialize;
 use tauri::{AppHandle, State};
+use tokio::io::AsyncWriteExt;
 use tokio::sync::Mutex;
 
 use crate::hosts::Host;
 use crate::ssh::{connect_authenticated, Connection};
+
+/// Escribe (creando o truncando) un archivo remoto. IMPRESCINDIBLE usar
+/// `create` (CREATE|TRUNCATE|WRITE): el atajo `SftpSession::write` abre solo
+/// con WRITE, así que falla con NoSuchFile en archivos nuevos y deja basura al
+/// final si el contenido nuevo es más corto que el anterior.
+async fn write_remote(sftp: &SftpSession, path: &str, data: &[u8]) -> Result<(), String> {
+    let mut file = sftp.create(path).await.map_err(|e| e.to_string())?;
+    file.write_all(data).await.map_err(|e| e.to_string())?;
+    file.flush().await.map_err(|e| e.to_string())?;
+    file.shutdown().await.map_err(|e| e.to_string())?;
+    Ok(())
+}
 
 /// Mantiene vivas las sesiones SFTP. La conexión SSH se guarda junto a la
 /// sesión: si se soltara, el canal subyacente (y sus bastiones) morirían.
@@ -129,10 +142,7 @@ pub async fn sftp_upload(
     let bytes = tokio::fs::read(&local_path)
         .await
         .map_err(|e| e.to_string())?;
-    conn.sftp
-        .write(&remote_path, &bytes)
-        .await
-        .map_err(|e| e.to_string())
+    write_remote(&conn.sftp, &remote_path, &bytes).await
 }
 
 /// Máximo para el editor integrado: 2 MB. Por encima, mejor descargar.
@@ -163,10 +173,7 @@ pub async fn sftp_write_text(
 ) -> Result<(), String> {
     let sessions = state.sessions.lock().await;
     let conn = sessions.get(&sftp_id).ok_or("sesión SFTP no encontrada")?;
-    conn.sftp
-        .write(&path, content.as_bytes())
-        .await
-        .map_err(|e| e.to_string())
+    write_remote(&conn.sftp, &path, content.as_bytes()).await
 }
 
 #[tauri::command]
