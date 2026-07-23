@@ -116,14 +116,30 @@ fn derive_key(password: &str, salt: &[u8; 16]) -> Result<[u8; 32], String> {
     Ok(key)
 }
 
-fn write_encrypted(app: &AppHandle, unlocked: &Unlocked) -> Result<(), String> {
-    let plaintext = serde_json::to_vec(&unlocked.data).map_err(|e| e.to_string())?;
-    let cipher = ChaCha20Poly1305::new((&unlocked.key).into());
+/// Cifra con ChaCha20-Poly1305 y un nonce aleatorio. Función pura: sin disco
+/// ni Tauri, para poder testearla de forma aislada.
+fn encrypt_bytes(key: &[u8; 32], plaintext: &[u8]) -> Result<([u8; 12], Vec<u8>), String> {
+    let cipher = ChaCha20Poly1305::new(key.into());
     let mut nonce = [0u8; 12];
     OsRng.fill_bytes(&mut nonce);
     let ciphertext = cipher
-        .encrypt((&nonce).into(), plaintext.as_slice())
+        .encrypt((&nonce).into(), plaintext)
         .map_err(|_| "No se pudo cifrar el vault.".to_string())?;
+    Ok((nonce, ciphertext))
+}
+
+/// Descifra y verifica el tag AEAD. Un tag inválido (clave incorrecta o datos
+/// manipulados) es un error, no un pánico.
+fn decrypt_bytes(key: &[u8; 32], nonce: &[u8; 12], ciphertext: &[u8]) -> Result<Vec<u8>, String> {
+    let cipher = ChaCha20Poly1305::new(key.into());
+    cipher
+        .decrypt(nonce.into(), ciphertext)
+        .map_err(|_| "Contraseña incorrecta.".to_string())
+}
+
+fn write_encrypted(app: &AppHandle, unlocked: &Unlocked) -> Result<(), String> {
+    let plaintext = serde_json::to_vec(&unlocked.data).map_err(|e| e.to_string())?;
+    let (nonce, ciphertext) = encrypt_bytes(&unlocked.key, &plaintext)?;
 
     let file = VaultFile {
         version: 1,
@@ -220,10 +236,7 @@ pub fn vault_unlock(
     let ciphertext = B64.decode(&file.data).map_err(|e| e.to_string())?;
 
     let key = derive_key(&password, &salt)?;
-    let cipher = ChaCha20Poly1305::new((&key).into());
-    let plaintext = cipher
-        .decrypt((&nonce).into(), ciphertext.as_slice())
-        .map_err(|_| "Contraseña incorrecta.".to_string())?;
+    let plaintext = decrypt_bytes(&key, &nonce, &ciphertext)?;
     let data: VaultData = serde_json::from_slice(&plaintext).map_err(|e| e.to_string())?;
 
     *state.0.lock().unwrap() = Some(Unlocked {
@@ -291,4 +304,53 @@ pub fn vault_import(
 
     *state.0.lock().unwrap() = None;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SALT: [u8; 16] = [7u8; 16];
+
+    #[test]
+    fn cifrar_y_descifrar_recupera_el_texto() {
+        let key = derive_key("contraseña-fuerte", &SALT).unwrap();
+        let secreto = b"root@prod password super secreta";
+        let (nonce, ct) = encrypt_bytes(&key, secreto).unwrap();
+        let recuperado = decrypt_bytes(&key, &nonce, &ct).unwrap();
+        assert_eq!(recuperado, secreto);
+    }
+
+    #[test]
+    fn contrasena_incorrecta_falla_no_devuelve_basura() {
+        let buena = derive_key("la-correcta", &SALT).unwrap();
+        let mala = derive_key("la-incorrecta", &SALT).unwrap();
+        let (nonce, ct) = encrypt_bytes(&buena, b"datos del vault").unwrap();
+        // el tag AEAD debe rechazar la clave equivocada
+        assert!(decrypt_bytes(&mala, &nonce, &ct).is_err());
+    }
+
+    #[test]
+    fn ciphertext_manipulado_es_rechazado() {
+        let key = derive_key("clave", &SALT).unwrap();
+        let (nonce, mut ct) = encrypt_bytes(&key, b"integridad").unwrap();
+        ct[0] ^= 0xff; // un bit cambiado invalida el tag
+        assert!(decrypt_bytes(&key, &nonce, &ct).is_err());
+    }
+
+    #[test]
+    fn mismo_password_distinta_sal_da_distinta_clave() {
+        let salt2: [u8; 16] = [9u8; 16];
+        let k1 = derive_key("igual", &SALT).unwrap();
+        let k2 = derive_key("igual", &salt2).unwrap();
+        assert_ne!(k1, k2);
+    }
+
+    #[test]
+    fn nonce_es_distinto_en_cada_cifrado() {
+        let key = derive_key("clave", &SALT).unwrap();
+        let (n1, _) = encrypt_bytes(&key, b"x").unwrap();
+        let (n2, _) = encrypt_bytes(&key, b"x").unwrap();
+        assert_ne!(n1, n2, "reutilizar el nonce rompe ChaCha20-Poly1305");
+    }
 }

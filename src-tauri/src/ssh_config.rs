@@ -43,7 +43,12 @@ pub fn read_ssh_config() -> Result<Vec<SshConfigHost>, String> {
     let Ok(raw) = fs::read_to_string(&path) else {
         return Ok(Vec::new());
     };
+    Ok(parse_config(&raw))
+}
 
+/// Parser puro del formato de ~/.ssh/config. Aislado del disco para poder
+/// testearlo directamente sobre el mismo código que corre en producción.
+fn parse_config(raw: &str) -> Vec<SshConfigHost> {
     let mut out = Vec::new();
     let mut current = Block::default();
 
@@ -77,5 +82,49 @@ pub fn read_ssh_config() -> Result<Vec<SshConfigHost>, String> {
         }
     }
     flush(current, &mut out);
-    Ok(out)
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_config as parse;
+
+    #[test]
+    fn parsea_un_host_completo() {
+        let hosts = parse(
+            "Host prod\n  HostName 10.0.0.1\n  User deploy\n  Port 2222\n  IdentityFile ~/.ssh/prod",
+        );
+        assert_eq!(hosts.len(), 1);
+        assert_eq!(hosts[0].alias, "prod");
+        assert_eq!(hosts[0].hostname, "10.0.0.1");
+        assert_eq!(hosts[0].user.as_deref(), Some("deploy"));
+        assert_eq!(hosts[0].port, 2222);
+        assert_eq!(hosts[0].identity_file.as_deref(), Some("~/.ssh/prod"));
+    }
+
+    #[test]
+    fn ignora_patrones_con_comodines() {
+        // "Host *" no es un host concreto y no debe aparecer
+        let hosts = parse("Host *\n  User root\n\nHost real\n  HostName 1.2.3.4");
+        assert_eq!(hosts.len(), 1);
+        assert_eq!(hosts[0].alias, "real");
+    }
+
+    #[test]
+    fn el_puerto_por_defecto_es_22() {
+        let hosts = parse("Host x\n  HostName h");
+        assert_eq!(hosts[0].port, 22);
+    }
+
+    #[test]
+    fn varios_alias_en_una_linea_generan_varias_entradas() {
+        let hosts = parse("Host a b\n  HostName h");
+        assert_eq!(hosts.len(), 2);
+    }
+
+    #[test]
+    fn sin_hostname_usa_el_alias() {
+        let hosts = parse("Host solo-alias\n  User u");
+        assert_eq!(hosts[0].hostname, "solo-alias");
+    }
 }
