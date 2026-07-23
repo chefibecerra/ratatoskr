@@ -1,8 +1,18 @@
 import { useEffect, useState } from "react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { openPath } from "@tauri-apps/plugin-opener";
+import {
+  ArrowLeftRight,
+  Cable,
+  Lock,
+  Palette,
+  ShieldCheck,
+  SquareTerminal,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +44,7 @@ import {
   type VaultInfo,
 } from "@/lib/ipc";
 import { useHosts } from "@/stores/hosts";
+import { useLibrary } from "@/stores/library";
 import { TERMINAL_THEMES } from "@/lib/terminal-themes";
 import {
   FONT_FAMILIES,
@@ -44,6 +55,8 @@ import { useUpdater } from "@/stores/updater";
 import { useVault } from "@/stores/vault";
 import { toast } from "sonner";
 import { getVersion } from "@tauri-apps/api/app";
+
+import logo from "@/assets/ratatoskr.png?inline";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -340,6 +353,91 @@ function DataTab() {
   );
 }
 
+function ThemePreview({ themeId }: { themeId: string }) {
+  const c = TERMINAL_THEMES.find((t) => t.id === themeId)?.colors;
+  if (!c) return null;
+  return (
+    <div
+      className="mt-1 rounded-lg border border-border p-3 font-mono text-[11px] leading-5"
+      style={{ backgroundColor: c.background as string, color: c.foreground as string }}
+    >
+      <div>
+        <span style={{ color: c.green as string }}>deploy@web-prod</span>
+        <span style={{ color: c.foreground as string }}>:</span>
+        <span style={{ color: c.blue as string }}>~</span>$ ls
+      </div>
+      <div>
+        <span style={{ color: c.blue as string }}>backups</span>{"  "}
+        <span style={{ color: c.green as string }}>deploy.sh</span>{"  "}
+        <span style={{ color: c.red as string }}>error.log</span>{"  "}
+        <span style={{ color: c.yellow as string }}>config.yml</span>
+      </div>
+      <div>
+        <span style={{ color: c.green as string }}>deploy@web-prod</span>
+        <span style={{ color: c.foreground as string }}>:</span>
+        <span style={{ color: c.blue as string }}>~</span>${" "}
+        <span
+          className="inline-block h-3 w-1.5 align-text-bottom"
+          style={{ backgroundColor: c.cursor as string }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function KnownHostsManager() {
+  const knownHosts = useLibrary((s) => s.knownHosts);
+  const loadKnownHosts = useLibrary((s) => s.loadKnownHosts);
+  const forget = useLibrary((s) => s.forgetKnownHost);
+
+  useEffect(() => {
+    void loadKnownHosts();
+  }, [loadKnownHosts]);
+
+  return (
+    <div className="py-2.5">
+      <Label className="text-[13px] font-normal">Servidores conocidos</Label>
+      <p className="mt-0.5 mb-2 text-[11px] text-muted-foreground">
+        Huellas verificadas. Olvida una si un servidor cambió de clave de forma
+        legítima (reinstalación) para poder reconectar.
+      </p>
+      {knownHosts.length === 0 ? (
+        <p className="text-[11px] text-muted-foreground/70">
+          Aún no hay servidores registrados.
+        </p>
+      ) : (
+        <div className="max-h-36 space-y-0.5 overflow-y-auto">
+          {knownHosts.map((entry) => (
+            <div
+              key={entry.host}
+              className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent/50"
+            >
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-xs">{entry.host}</span>
+                <span
+                  className="block truncate font-mono text-[10px] text-muted-foreground"
+                  title={entry.fingerprint}
+                >
+                  {entry.fingerprint}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100"
+                onClick={() => void forget(entry.host)}
+                title="Olvidar este servidor"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function UpdateRow() {
   const checkManual = useUpdater((s) => s.checkManual);
   const [version, setVersion] = useState("");
@@ -377,38 +475,64 @@ function UpdateRow() {
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const settings = useSettings();
   const checkVault = useVault((s) => s.check);
+  const [appVersion, setAppVersion] = useState("");
+
+  useEffect(() => {
+    void getVersion().then(setAppVersion);
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-3 sm:max-w-110">
-        <DialogHeader>
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-2xl">
+        <DialogHeader className="border-b border-border px-5 py-3">
           <DialogTitle className="text-[15px]">Preferencias</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="apariencia">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="apariencia" className="text-xs">
-              Apariencia
-            </TabsTrigger>
-            <TabsTrigger value="terminal" className="text-xs">
-              Terminal
-            </TabsTrigger>
-            <TabsTrigger value="conexion" className="text-xs">
-              Conexión
-            </TabsTrigger>
-            <TabsTrigger value="datos" className="text-xs">
-              Datos
-            </TabsTrigger>
-            <TabsTrigger value="seguridad" className="text-xs">
-              Seguridad
-            </TabsTrigger>
-            <TabsTrigger value="vault" className="text-xs">
-              Vault
-            </TabsTrigger>
-          </TabsList>
+        {/* layout estilo Ajustes del Sistema: categorías a la izquierda */}
+        <Tabs
+          defaultValue="apariencia"
+          orientation="vertical"
+          className="flex flex-row gap-0"
+        >
+          <div className="flex h-[400px] w-44 flex-col border-r border-border">
+            <TabsList className="flex flex-1 flex-col items-stretch justify-start gap-0.5 rounded-none border-0 bg-transparent p-2">
+              {[
+                { v: "apariencia", label: "Apariencia", Icon: Palette },
+                { v: "terminal", label: "Terminal", Icon: SquareTerminal },
+                { v: "conexion", label: "Conexión", Icon: Cable },
+                { v: "datos", label: "Datos", Icon: ArrowLeftRight },
+                { v: "seguridad", label: "Seguridad", Icon: ShieldCheck },
+                { v: "vault", label: "Vault", Icon: Lock },
+              ].map(({ v, label, Icon }) => (
+                <TabsTrigger
+                  key={v}
+                  value={v}
+                  className="justify-start gap-2 rounded-md px-2.5 py-1.5 text-[13px] data-[state=active]:bg-accent data-[state=active]:shadow-none"
+                >
+                  <Icon className="size-4 shrink-0" />
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-          {/* altura fija: cambiar de pestaña no redimensiona el diálogo */}
-          <div className="h-72 overflow-y-auto pt-2">
+            <div className="flex items-center gap-2 border-t border-border px-3 py-2.5">
+              <img
+                src={logo}
+                alt=""
+                className="size-6 rounded-md"
+                draggable={false}
+              />
+              <div className="min-w-0 leading-tight">
+                <div className="text-[12px] font-medium">Ratatoskr</div>
+                <div className="font-mono text-[10px] text-muted-foreground">
+                  v{appVersion || "…"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* altura fija: cambiar de categoría no redimensiona el diálogo */}
+          <div className="h-[400px] flex-1 overflow-y-auto px-5 py-3">
             <TabsContent value="apariencia" className="mt-0">
               <Row label="Tema del terminal">
                 <Select
@@ -431,6 +555,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   </SelectContent>
                 </Select>
               </Row>
+
+              <ThemePreview themeId={settings.themeId} />
 
               <Row
                 label="Opacidad"
@@ -665,6 +791,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   </SelectContent>
                 </Select>
               </Row>
+
+              <Separator className="my-2" />
+              <KnownHostsManager />
             </TabsContent>
 
             <TabsContent value="vault" className="mt-0">

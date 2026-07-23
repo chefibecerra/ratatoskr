@@ -110,11 +110,27 @@ pub struct Connection {
     jumps: Vec<client::Handle<ClientHandler>>,
 }
 
-fn lookup_host(app: &AppHandle, id: &str) -> Option<Host> {
-    app.state::<crate::vault::VaultManager>()
-        .with_data(|d| d.hosts.iter().find(|h| h.id == id).cloned())
-        .ok()
-        .flatten()
+/// Construye la cadena de bastiones de un host siguiendo jump_host_id, del más
+/// externo (la conexión directa) al más interno. Detecta ciclos. Función pura:
+/// recibe la lista de hosts, sin tocar disco ni Tauri.
+fn resolve_jump_chain(all_hosts: &[Host], target: &Host) -> Result<Vec<Host>, String> {
+    let mut hops: Vec<Host> = Vec::new();
+    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut cursor = target.clone();
+    while let Some(jid) = cursor.jump_host_id.clone() {
+        if !seen.insert(jid.clone()) {
+            return Err("Ciclo de jump hosts detectado.".into());
+        }
+        let jump = all_hosts
+            .iter()
+            .find(|h| h.id == jid)
+            .cloned()
+            .ok_or_else(|| "El jump host configurado ya no existe.".to_string())?;
+        hops.push(jump.clone());
+        cursor = jump;
+    }
+    hops.reverse();
+    Ok(hops)
 }
 
 async fn authenticate(
@@ -231,20 +247,12 @@ pub async fn connect_authenticated(
         ..Default::default()
     });
 
-    // Resuelve la cadena de bastiones siguiendo jump_host_id hacia atrás.
-    let mut hops: Vec<Host> = Vec::new();
-    let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
-    let mut cursor = host.clone();
-    while let Some(jid) = cursor.jump_host_id.clone() {
-        if !seen.insert(jid.clone()) {
-            return Err("Ciclo de jump hosts detectado.".into());
-        }
-        let jump = lookup_host(app, &jid)
-            .ok_or_else(|| "El jump host configurado ya no existe.".to_string())?;
-        hops.push(jump.clone());
-        cursor = jump;
-    }
-    hops.reverse(); // del más externo (conexión directa) al más interno
+    // Cadena de bastiones, del más externo (conexión directa) al más interno.
+    let all_hosts = app
+        .state::<crate::vault::VaultManager>()
+        .with_data(|d| d.hosts.clone())
+        .unwrap_or_default();
+    let hops = resolve_jump_chain(&all_hosts, host)?;
 
     let mut jumps: Vec<client::Handle<ClientHandler>> = Vec::new();
     for hop in &hops {
@@ -404,4 +412,67 @@ pub async fn ssh_disconnect(state: State<'_, SshState>, session_id: String) -> R
         return Ok(());
     };
     tx.send(SshOp::Close).await.map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::hosts::AuthMethod;
+
+    fn host(id: &str, jump: Option<&str>) -> Host {
+        Host {
+            id: id.into(),
+            name: id.into(),
+            hostname: format!("{id}.example"),
+            port: 22,
+            username: "root".into(),
+            auth: AuthMethod::Password { password: String::new() },
+            tags: vec![],
+            group: None,
+            jump_host_id: jump.map(|s| s.into()),
+            login_commands: vec![],
+        }
+    }
+
+    #[test]
+    fn sin_bastion_la_cadena_esta_vacia() {
+        let t = host("target", None);
+        let chain = resolve_jump_chain(&[t.clone()], &t).unwrap();
+        assert!(chain.is_empty());
+    }
+
+    #[test]
+    fn un_bastion() {
+        let b = host("bastion", None);
+        let t = host("target", Some("bastion"));
+        let chain = resolve_jump_chain(&[b.clone(), t.clone()], &t).unwrap();
+        assert_eq!(chain.len(), 1);
+        assert_eq!(chain[0].id, "bastion");
+    }
+
+    #[test]
+    fn cadena_ordenada_de_fuera_hacia_dentro() {
+        // target -> b1 -> b2 ; conectamos primero b2 (directo), luego b1, luego target
+        let b2 = host("b2", None);
+        let b1 = host("b1", Some("b2"));
+        let t = host("target", Some("b1"));
+        let chain = resolve_jump_chain(&[b2, b1, t.clone()], &t).unwrap();
+        assert_eq!(chain.iter().map(|h| h.id.as_str()).collect::<Vec<_>>(), ["b2", "b1"]);
+    }
+
+    #[test]
+    fn detecta_ciclo() {
+        // a -> b -> a
+        let a = host("a", Some("b"));
+        let b = host("b", Some("a"));
+        let err = resolve_jump_chain(&[a.clone(), b], &a).unwrap_err();
+        assert!(err.contains("Ciclo"));
+    }
+
+    #[test]
+    fn bastion_inexistente_es_error() {
+        let t = host("target", Some("fantasma"));
+        let err = resolve_jump_chain(&[t.clone()], &t).unwrap_err();
+        assert!(err.contains("ya no existe"));
+    }
 }

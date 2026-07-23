@@ -26,6 +26,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # La versión de la app sale de package.json; el release del tag de git.
+      # Si no coinciden, abortamos: nunca se publica una versión inconsistente.
+      - name: Verificar que el tag coincide con la versión
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          PKG="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::El tag $TAG no coincide con la versión de package.json ($PKG). Sincroniza y vuelve a etiquetar."
+            exit 1
+          fi
+          echo "Versión coherente: $TAG"
+
       - uses: pnpm/action-setup@v4
         with:
           version: 10

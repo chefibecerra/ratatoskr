@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  Copy,
   FileInput,
   FolderOpen,
   MoreHorizontal,
@@ -12,6 +13,16 @@ import { toast } from "sonner";
 
 import { PanelEmpty } from "@/components/panels/PanelEmpty";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { readSshConfig } from "@/lib/ipc";
 import { useSftp } from "@/stores/sftp";
 import {
@@ -31,11 +42,19 @@ import type { Host } from "@/types";
 function HostRow({ host }: { host: Host }) {
   const connect = useSessions((s) => s.connect);
   const remove = useHosts((s) => s.remove);
+  const save = useHosts((s) => s.save);
   const browseFiles = useSftp((s) => s.connect);
   const openHostForm = useUi((s) => s.openHostForm);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const hasLiveSession = useSessions((s) =>
     s.sessions.some((x) => x.host.id === host.id && x.status === "connected"),
   );
+
+  const duplicate = async () => {
+    // id vacío → el backend genera uno nuevo; auth y todo lo demás se copian
+    await save({ ...host, id: "", name: `${host.name} (copia)` });
+    toast.success("Host duplicado");
+  };
 
   return (
     <div className="group flex items-center rounded-lg transition-colors hover:bg-accent/50">
@@ -78,14 +97,41 @@ function HostRow({ host }: { host: Host }) {
           <DropdownMenuItem onClick={() => openHostForm(host)}>
             <Pencil className="size-3.5" /> Editar
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => void duplicate()}>
+            <Copy className="size-3.5" /> Duplicar
+          </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
-            onClick={() => void remove(host.id)}
+            onClick={() => setConfirmOpen(true)}
           >
             <Trash2 className="size-3.5" /> Eliminar
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent className="sm:max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[15px]">
+              ¿Eliminar {host.name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs">
+              Se borra el host y sus credenciales del vault. Esta acción no se
+              puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel size="sm">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              size="sm"
+              onClick={() => void remove(host.id)}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

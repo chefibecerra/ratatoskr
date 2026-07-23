@@ -86,6 +86,12 @@ export const sftpUpload = (
   remotePath: string,
 ) => invoke<void>("sftp_upload", { sftpId, localPath, remotePath });
 
+export const sftpReadText = (sftpId: string, path: string) =>
+  invoke<string>("sftp_read_text", { sftpId, path });
+
+export const sftpWriteText = (sftpId: string, path: string, content: string) =>
+  invoke<void>("sftp_write_text", { sftpId, path, content });
+
 export const sftpMkdir = (sftpId: string, path: string) =>
   invoke<void>("sftp_mkdir", { sftpId, path });
 

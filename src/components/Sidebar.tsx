@@ -5,14 +5,12 @@ import {
   Plus,
   Server,
   Settings2,
-  ShieldCheck,
   SquareTerminal,
 } from "lucide-react";
 
 import { HistoryPanel } from "@/components/panels/HistoryPanel";
 import { HostsPanel } from "@/components/panels/HostsPanel";
 import { KeysPanel } from "@/components/panels/KeysPanel";
-import { KnownHostsPanel } from "@/components/panels/KnownHostsPanel";
 import { SnippetsPanel } from "@/components/panels/SnippetsPanel";
 import { TunnelsPanel } from "@/components/panels/TunnelsPanel";
 import { Button } from "@/components/ui/button";
@@ -28,7 +26,6 @@ const SECTIONS: {
   { id: "keys", label: "Claves", icon: KeyRound },
   { id: "snippets", label: "Fragmentos", icon: SquareTerminal },
   { id: "tunnels", label: "Túneles", icon: Network },
-  { id: "known-hosts", label: "Servidores", icon: ShieldCheck },
   { id: "history", label: "Historial", icon: History },
 ];
 
@@ -39,7 +36,8 @@ export function Sidebar() {
   const openSnippetForm = useUi((s) => s.openSnippetForm);
   const setSettingsOpen = useUi((s) => s.setSettingsOpen);
 
-  const current = SECTIONS.find((s) => s.id === section) ?? SECTIONS[0];
+  const currentLabel =
+    SECTIONS.find((s) => s.id === section)?.label ?? "";
   const newAction =
     section === "hosts"
       ? () => openHostForm(null)
@@ -49,14 +47,12 @@ export function Sidebar() {
 
   return (
     <aside className="flex w-[264px] shrink-0 flex-col border-r border-border bg-background">
-      {/* zona de arrastre bajo los semáforos de macOS */}
+      {/* fila de los semáforos de macOS: solo controles, sin título */}
       <div
         data-tauri-drag-region
         className="flex h-12 shrink-0 items-center border-b border-border pr-2 pl-[88px]"
       >
-        <span className="pointer-events-none min-w-0 flex-1 truncate text-[13px] font-medium tracking-tight text-muted-foreground">
-          {current.label}
-        </span>
+        <div data-tauri-drag-region className="flex-1" />
         {newAction && (
           <Button
             variant="ghost"
@@ -105,23 +101,34 @@ export function Sidebar() {
           key={section}
           className="flex min-h-0 min-w-0 flex-1 flex-col duration-200 animate-in fade-in slide-in-from-left-2"
         >
+          <h2 className="shrink-0 px-3 pt-3 pb-0.5 text-[13px] font-semibold tracking-tight">
+            {currentLabel}
+          </h2>
           {section === "hosts" && <HostsPanel />}
           {section === "keys" && <KeysPanel />}
           {section === "snippets" && <SnippetsPanel />}
           {section === "tunnels" && <TunnelsPanel />}
-          {section === "known-hosts" && <KnownHostsPanel />}
           {section === "history" && <HistoryPanel />}
         </div>
       </div>
 
-      <div className="border-t border-border px-3 py-2">
+      <div className="flex items-center gap-1 border-t border-border px-3 py-2">
         <button
-          className="flex w-full items-center justify-between rounded-md px-1 py-1 text-[11px] text-muted-foreground/70 transition-colors hover:text-muted-foreground"
+          className="flex flex-1 items-center justify-between rounded-md px-1 py-1 text-[11px] text-muted-foreground/70 transition-colors hover:text-muted-foreground"
           onClick={() => useUi.getState().setPaletteOpen(true)}
         >
           <span>Buscar y conectar</span>
           <kbd className="rounded border border-border bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px]">
             ⌘T
+          </kbd>
+        </button>
+        <button
+          className="rounded-md px-1.5 py-1 text-muted-foreground/70 transition-colors hover:text-muted-foreground"
+          onClick={() => useUi.getState().setShortcutsOpen(true)}
+          title="Atajos de teclado (⌘/)"
+        >
+          <kbd className="rounded border border-border bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px]">
+            ⌘/
           </kbd>
         </button>
       </div>

@@ -135,6 +135,40 @@ pub async fn sftp_upload(
         .map_err(|e| e.to_string())
 }
 
+/// Máximo para el editor integrado: 2 MB. Por encima, mejor descargar.
+const MAX_EDIT_BYTES: usize = 2 * 1024 * 1024;
+
+#[tauri::command]
+pub async fn sftp_read_text(
+    state: State<'_, SftpState>,
+    sftp_id: String,
+    path: String,
+) -> Result<String, String> {
+    let sessions = state.sessions.lock().await;
+    let conn = sessions.get(&sftp_id).ok_or("sesión SFTP no encontrada")?;
+    let bytes = conn.sftp.read(&path).await.map_err(|e| e.to_string())?;
+    if bytes.len() > MAX_EDIT_BYTES {
+        return Err("El archivo es demasiado grande para editarlo aquí.".into());
+    }
+    String::from_utf8(bytes)
+        .map_err(|_| "No es un archivo de texto (contiene datos binarios).".to_string())
+}
+
+#[tauri::command]
+pub async fn sftp_write_text(
+    state: State<'_, SftpState>,
+    sftp_id: String,
+    path: String,
+    content: String,
+) -> Result<(), String> {
+    let sessions = state.sessions.lock().await;
+    let conn = sessions.get(&sftp_id).ok_or("sesión SFTP no encontrada")?;
+    conn.sftp
+        .write(&path, content.as_bytes())
+        .await
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn sftp_mkdir(
     state: State<'_, SftpState>,

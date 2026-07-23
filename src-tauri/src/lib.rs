@@ -23,6 +23,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        // recuerda tamaño y posición de la ventana entre sesiones
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(ssh::SshState::default())
         .manage(sftp::SftpState::default())
         .manage(tunnel::TunnelState::default())
@@ -107,6 +109,8 @@ pub fn run() {
             sftp::sftp_list,
             sftp::sftp_download,
             sftp::sftp_upload,
+            sftp::sftp_read_text,
+            sftp::sftp_write_text,
             sftp::sftp_mkdir,
             sftp::sftp_remove,
             sftp::sftp_rename,

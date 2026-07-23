@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +22,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useHosts } from "@/stores/hosts";
 import { useLibrary } from "@/stores/library";
+import { cn } from "@/lib/utils";
 import type { Host } from "@/types";
 
 const CUSTOM_KEY = "__custom__";
@@ -89,6 +91,7 @@ export function HostForm({ open, onOpenChange, host }: HostFormProps) {
   const jumpCandidates = allHosts.filter((h) => h.id !== host?.id);
   const [form, setForm] = useState<FormState>(EMPTY);
   const [customKey, setCustomKey] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,6 +100,13 @@ export function HostForm({ open, onOpenChange, host }: HostFormProps) {
       setForm(host ? toForm(host) : EMPTY);
       setError(null);
       void loadKeys();
+      // si el host ya tiene datos avanzados, muéstralos desplegados
+      const hasAdvanced =
+        !!host &&
+        (host.tags.length > 0 ||
+          host.jump_host_id !== null ||
+          host.login_commands.length > 0);
+      setShowAdvanced(hasAdvanced);
     }
   }, [open, host, loadKeys]);
 
@@ -153,7 +163,7 @@ export function HostForm({ open, onOpenChange, host }: HostFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{host ? "Editar host" : "Nuevo host"}</DialogTitle>
           <DialogDescription>
@@ -163,7 +173,7 @@ export function HostForm({ open, onOpenChange, host }: HostFormProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid max-h-[70vh] gap-4 overflow-y-auto px-0.5">
+        <div className="grid max-h-[70vh] gap-4 overflow-x-hidden overflow-y-auto px-0.5">
 
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1.5">
@@ -304,52 +314,70 @@ export function HostForm({ open, onOpenChange, host }: HostFormProps) {
             </>
           )}
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="tags">Tags (separados por coma)</Label>
-            <Input
-              id="tags"
-              placeholder="proxmox, homelab"
-              value={form.tags}
-              onChange={(e) => patch({ tags: e.target.value })}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="-mx-1 flex items-center gap-1.5 rounded-md px-1 py-1 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ChevronRight
+              className={cn(
+                "size-3.5 transition-transform",
+                showAdvanced && "rotate-90",
+              )}
             />
-          </div>
+            Opciones avanzadas
+          </button>
 
-          <div className="grid gap-1.5">
-            <Label>Conectar a través de (bastión)</Label>
-            <Select
-              value={form.jumpHostId}
-              onValueChange={(v) => patch({ jumpHostId: v })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_JUMP}>Conexión directa</SelectItem>
-                {jumpCandidates.map((h) => (
-                  <SelectItem key={h.id} value={h.id}>
-                    {h.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">
-              Salta primero por otro host (bastión) antes de llegar a este.
-            </p>
-          </div>
+          {showAdvanced && (
+            <div className="grid gap-4 duration-200 animate-in fade-in slide-in-from-top-1">
+              <div className="grid gap-1.5">
+                <Label htmlFor="tags">Tags (separados por coma)</Label>
+                <Input
+                  id="tags"
+                  placeholder="proxmox, homelab"
+                  value={form.tags}
+                  onChange={(e) => patch({ tags: e.target.value })}
+                />
+              </div>
 
-          <div className="grid gap-1.5">
-            <Label htmlFor="login-commands">Comandos al conectar</Label>
-            <Textarea
-              id="login-commands"
-              placeholder={"cd /var/www\nsource .venv/bin/activate"}
-              className="min-h-16 font-mono text-xs"
-              value={form.loginCommands}
-              onChange={(e) => patch({ loginCommands: e.target.value })}
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Uno por línea. Se ejecutan al abrir la sesión.
-            </p>
-          </div>
+              <div className="grid gap-1.5">
+                <Label>Conectar a través de (bastión)</Label>
+                <Select
+                  value={form.jumpHostId}
+                  onValueChange={(v) => patch({ jumpHostId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_JUMP}>Conexión directa</SelectItem>
+                    {jumpCandidates.map((h) => (
+                      <SelectItem key={h.id} value={h.id}>
+                        {h.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Salta primero por otro host (bastión) antes de llegar a este.
+                </p>
+              </div>
+
+              <div className="grid gap-1.5">
+                <Label htmlFor="login-commands">Comandos al conectar</Label>
+                <Textarea
+                  id="login-commands"
+                  placeholder={"cd /var/www\nsource .venv/bin/activate"}
+                  className="min-h-16 font-mono text-xs"
+                  value={form.loginCommands}
+                  onChange={(e) => patch({ loginCommands: e.target.value })}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Uno por línea. Se ejecutan al abrir la sesión.
+                </p>
+              </div>
+            </div>
+          )}
 
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>

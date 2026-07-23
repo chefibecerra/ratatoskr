@@ -50,6 +50,10 @@ export function useShortcuts() {
             e.preventDefault();
             void useVault.getState().lock();
             return;
+          case "/":
+            e.preventDefault();
+            ui.setShortcutsOpen(!ui.shortcutsOpen);
+            return;
           case "d":
             if (sessions.sessions.length > 1) {
               e.preventDefault();

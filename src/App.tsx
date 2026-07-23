@@ -9,6 +9,7 @@ import { LockScreen } from "@/components/LockScreen";
 import { SessionTabs } from "@/components/SessionTabs";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { SftpBrowser } from "@/components/SftpBrowser";
+import { ShortcutsDialog } from "@/components/ShortcutsDialog";
 import { TerminalArea } from "@/components/TerminalArea";
 import { SnippetForm } from "@/components/SnippetForm";
 import { Sidebar } from "@/components/Sidebar";
@@ -72,6 +73,7 @@ function App() {
       />
       <SnippetForm />
       <SftpBrowser />
+      <ShortcutsDialog />
       <CommandPalette />
       <ConfirmCloseDialog />
       <Toaster position="bottom-right" />

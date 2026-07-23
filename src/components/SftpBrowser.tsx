@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SftpEditor } from "@/components/SftpEditor";
 import {
   sftpDownload,
   sftpMkdir,
@@ -61,11 +62,13 @@ function EntryRow({
   entry,
   sftpId,
   onNavigate,
+  onEdit,
   onChanged,
 }: {
   entry: SftpEntry;
   sftpId: string;
   onNavigate: (path: string) => void;
+  onEdit: (path: string) => void;
   onChanged: () => void;
 }) {
   const download = async () => {
@@ -104,7 +107,10 @@ function EntryRow({
     <div className="group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 transition-colors hover:bg-accent/50">
       <button
         className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
-        onDoubleClick={() => entry.is_dir && onNavigate(entry.path)}
+        onDoubleClick={() =>
+          entry.is_dir ? onNavigate(entry.path) : onEdit(entry.path)
+        }
+        title={entry.is_dir ? "Abrir carpeta" : "Doble clic para editar"}
       >
         {entry.is_dir ? (
           <Folder className="size-4 shrink-0 text-blue-400/80" />
@@ -158,6 +164,7 @@ export function SftpBrowser() {
   const refresh = useSftp((s) => s.refresh);
   const close = useSftp((s) => s.close);
   const [busy, setBusy] = useState(false);
+  const [editingPath, setEditingPath] = useState<string | null>(null);
 
   const upload = async () => {
     if (!sftpId) return;
@@ -266,15 +273,24 @@ export function SftpBrowser() {
                 entry={entry}
                 sftpId={sftpId}
                 onNavigate={(p) => void navigate(p)}
+                onEdit={(p) => setEditingPath(p)}
                 onChanged={() => void refresh()}
               />
             ))}
         </ScrollArea>
 
         <p className="border-t border-border px-4 py-2 text-[11px] text-muted-foreground/70">
-          Doble clic para abrir una carpeta.
+          Doble clic: carpeta para abrir, archivo para editar.
         </p>
       </DialogContent>
+
+      {sftpId && editingPath && (
+        <SftpEditor
+          sftpId={sftpId}
+          path={editingPath}
+          onClose={() => setEditingPath(null)}
+        />
+      )}
     </Dialog>
   );
 }

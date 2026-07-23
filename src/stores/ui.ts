@@ -7,7 +7,6 @@ export type SidebarSection =
   | "keys"
   | "snippets"
   | "tunnels"
-  | "known-hosts"
   | "history";
 
 interface UiState {
@@ -16,6 +15,7 @@ interface UiState {
   paletteOpen: boolean;
   findOpen: boolean;
   broadcastOpen: boolean;
+  shortcutsOpen: boolean;
   /** rejilla con todas las sesiones a la vez en lugar de solo la activa */
   splitView: boolean;
   hostFormOpen: boolean;
@@ -29,6 +29,7 @@ interface UiState {
   setPaletteOpen: (open: boolean) => void;
   setFindOpen: (open: boolean) => void;
   setBroadcastOpen: (open: boolean) => void;
+  setShortcutsOpen: (open: boolean) => void;
   setSplitView: (split: boolean) => void;
   openHostForm: (host: Host | null) => void;
   setHostFormOpen: (open: boolean) => void;
@@ -43,6 +44,7 @@ export const useUi = create<UiState>((set) => ({
   paletteOpen: false,
   findOpen: false,
   broadcastOpen: false,
+  shortcutsOpen: false,
   splitView: false,
   hostFormOpen: false,
   editingHost: null,
@@ -54,6 +56,7 @@ export const useUi = create<UiState>((set) => ({
   setPaletteOpen: (open) => set({ paletteOpen: open }),
   setFindOpen: (open) => set({ findOpen: open }),
   setBroadcastOpen: (open) => set({ broadcastOpen: open }),
+  setShortcutsOpen: (open) => set({ shortcutsOpen: open }),
   setSplitView: (split) => set({ splitView: split }),
   openHostForm: (host) => set({ hostFormOpen: true, editingHost: host }),
   setHostFormOpen: (open) =>

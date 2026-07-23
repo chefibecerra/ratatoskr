@@ -10,7 +10,7 @@ import "@xterm/xterm/css/xterm.css";
 
 import { FindBar } from "@/components/FindBar";
 import { Button } from "@/components/ui/button";
-import { sshResize, sshWrite } from "@/lib/ipc";
+import { forgetKnownHost, sshResize, sshWrite } from "@/lib/ipc";
 import { getTheme } from "@/lib/terminal-themes";
 import { useSessions, type Session } from "@/stores/sessions";
 import { fontStack, useSettings } from "@/stores/settings";
@@ -38,6 +38,15 @@ export function TerminalView({ session, active }: TerminalViewProps) {
   const setFindOpen = useUi((s) => s.setFindOpen);
   const settings = useSettings();
   const transparent = settings.opacity < 100;
+
+  // el backend rechaza con este texto cuando la huella del servidor cambió
+  const isKeyMismatch = session.reason?.includes("clave del servidor cambió");
+
+  const forgetAndReconnect = async () => {
+    const { hostname, port } = session.host;
+    await forgetKnownHost(`${hostname}:${port}`).catch(() => {});
+    reconnect(session.id);
+  };
 
   useEffect(() => {
     const el = containerRef.current;
@@ -194,14 +203,25 @@ export function TerminalView({ session, active }: TerminalViewProps) {
               </p>
             )}
           </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-7 rounded-full px-4 text-xs"
-            onClick={() => reconnect(session.id)}
-          >
-            Reconectar
-          </Button>
+          {isKeyMismatch ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 rounded-full px-4 text-xs"
+              onClick={() => void forgetAndReconnect()}
+            >
+              Olvidar clave y reconectar
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 rounded-full px-4 text-xs"
+              onClick={() => reconnect(session.id)}
+            >
+              Reconectar
+            </Button>
+          )}
         </div>
       )}
 
