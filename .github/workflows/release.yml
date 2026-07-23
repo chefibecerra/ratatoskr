@@ -69,24 +69,40 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Firma y notarización de macOS. Si estos secretos no existen, las
-          # variables quedan vacías y tauri-action compila sin firmar (como hasta
-          # ahora); en cuanto se rellenan, firma y notariza automáticamente.
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # NOTA: para firmar y notarizar macOS en el futuro, añade aquí las
+          # variables APPLE_* (CERTIFICATE, CERTIFICATE_PASSWORD, SIGNING_IDENTITY,
+          # ID, PASSWORD, TEAM_ID) Y crea sus secretos. Definirlas vacías rompe
+          # el build (tauri-action intenta importar un certificado inexistente).
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Ratatoskr ${{ github.ref_name }}"
           releaseBody: |
             Cliente SSH rápido, bonito y cifrado.
 
-            **Descargas**: elige el instalador de tu plataforma más abajo.
+            ### Instaladores
+            - **macOS**: `.dmg` (Apple Silicon o Intel)
+            - **Windows**: `-setup.exe` o `.msi`
+            - **Linux**: `.deb` o `.rpm`
+
+            ### Portables (sin instalar)
+            - **macOS**: `.app.tar.gz` — descomprime y ejecuta
+            - **Windows**: `_portable.exe` — ejecuta directamente (necesita WebView2, ya viene en Windows 10/11)
+            - **Linux**: `.AppImage` — da permiso de ejecución y ejecuta
+
             En macOS, si Gatekeeper se queja (app sin firmar todavía):
             `xattr -cr /Applications/Ratatoskr.app`
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      # Portable de Windows: el .exe crudo del build (self-contained salvo
+      # WebView2, que ya viene en Windows 10/11). Se ejecuta sin instalar.
+      - name: Publicar portable de Windows
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          cp "src-tauri/target/release/ratatoskr.exe" "Ratatoskr_${VERSION}_portable.exe"
+          gh release upload "${{ github.ref_name }}" "Ratatoskr_${VERSION}_portable.exe" --clobber
