@@ -14,7 +14,17 @@ mod tunnel;
 mod vault;
 
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
-use tauri::Emitter;
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{Emitter, Manager, WindowEvent};
+
+/// Muestra y enfoca la ventana principal (desde el tray).
+fn show_main(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.unminimize();
+        let _ = window.set_focus();
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -72,6 +82,61 @@ pub fn run() {
         .on_menu_event(|app, event| {
             if event.id().as_ref() == "settings" {
                 let _ = app.emit("open-settings", ());
+            }
+        })
+        // Icono en la barra de menú (macOS) / bandeja (Windows, Linux).
+        .setup(|app| {
+            let show = MenuItemBuilder::with_id("tray_show", "Mostrar Ratatoskr").build(app)?;
+            let quit = MenuItemBuilder::with_id("tray_quit", "Salir").build(app)?;
+            let tray_menu = MenuBuilder::new(app)
+                .item(&show)
+                .separator()
+                .item(&quit)
+                .build()?;
+
+            let mut tray = TrayIconBuilder::with_id("main")
+                .tooltip("Ratatoskr")
+                .menu(&tray_menu)
+                // clic izquierdo abre la ventana; el menú sale con clic derecho
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| match event.id().as_ref() {
+                    "tray_show" => show_main(app),
+                    "tray_quit" => app.exit(0),
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        show_main(tray.app_handle());
+                    }
+                });
+
+            // macOS: icono monocromo "template" que se adapta a la barra clara/oscura
+            #[cfg(target_os = "macos")]
+            {
+                let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray.png"))?;
+                tray = tray.icon(icon).icon_as_template(true);
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                if let Some(icon) = app.default_window_icon() {
+                    tray = tray.icon(icon.clone());
+                }
+            }
+
+            tray.build(app)?;
+            Ok(())
+        })
+        // Cerrar la ventana la esconde a la bandeja; las sesiones SSH siguen vivas.
+        // "Salir" del tray (o ⌘Q) cierra de verdad.
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
             }
         })
         .invoke_handler(tauri::generate_handler![
