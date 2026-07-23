@@ -15,6 +15,7 @@ use russh_sftp::client::SftpSession;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 const ADDR: (&str, u16) = ("127.0.0.1", 2222);
+const BASTION: (&str, u16) = ("127.0.0.1", 2223);
 const USER: &str = "tester";
 const PASS: &str = "testpass123";
 
@@ -72,6 +73,25 @@ impl client::Handler for RemoteForward {
             let _ = stream.flush().await;
         });
         Ok(())
+    }
+}
+
+/// Handler que captura la huella SHA256 de la clave del servidor, como hace el
+/// TOFU de la app (known_hosts::verify_and_store).
+struct CaptureKey(Arc<std::sync::Mutex<Option<String>>>);
+
+impl client::Handler for CaptureKey {
+    type Error = russh::Error;
+
+    async fn check_server_key(
+        &mut self,
+        key: &russh::keys::ssh_key::PublicKey,
+    ) -> Result<bool, Self::Error> {
+        let fp = key
+            .fingerprint(russh::keys::ssh_key::HashAlg::Sha256)
+            .to_string();
+        *self.0.lock().unwrap() = Some(fp);
+        Ok(true)
     }
 }
 
@@ -291,5 +311,80 @@ async fn reenvio_de_agente() {
     assert!(
         out.contains("SHA256") || out.contains("ED25519") || out.contains("RSA"),
         "ssh-add -l a través del agente reenviado debería listar claves: {out:?}"
+    );
+}
+
+#[tokio::test]
+#[ignore = "requiere el contenedor sshd en :2222"]
+async fn clave_del_servidor_estable_sha256() {
+    // La clave que ve check_server_key debe ser real, con formato SHA256:… y
+    // estable entre conexiones — es el cimiento sobre el que decide el TOFU.
+    async fn huella() -> String {
+        let capturada = Arc::new(std::sync::Mutex::new(None));
+        let config = Arc::new(client::Config::default());
+        // check_server_key se dispara durante el handshake, antes de auth.
+        let _handle = client::connect(config, ADDR, CaptureKey(capturada.clone()))
+            .await
+            .expect("conectar al contenedor");
+        let fp = capturada.lock().unwrap().clone();
+        fp.expect("check_server_key debería haber capturado la huella")
+    }
+
+    let a = huella().await;
+    let b = huella().await;
+    assert!(a.starts_with("SHA256:"), "formato de huella inesperado: {a}");
+    assert_eq!(
+        a, b,
+        "la clave del servidor debe ser idéntica entre conexiones (base del TOFU)"
+    );
+}
+
+#[tokio::test]
+#[ignore = "requiere rat-bastion (:2223) y rat-target en la red docker rattest"]
+async fn jump_host_a_traves_de_bastion() {
+    // Replica connect_hop(via=Some(bastión)): conectar al bastión, abrir un
+    // canal directo a un destino SOLO alcanzable por la red interna, y hacer
+    // SSH sobre ese canal.
+    let config = Arc::new(client::Config::default());
+
+    // 1) bastión
+    let mut bastion = client::connect(config.clone(), BASTION, Trusting)
+        .await
+        .expect("conectar al bastión :2223");
+    assert!(
+        bastion
+            .authenticate_password(USER, PASS)
+            .await
+            .unwrap()
+            .success(),
+        "auth en el bastión"
+    );
+
+    // 2) canal directo a través del bastión hacia el destino interno
+    let channel = bastion
+        .channel_open_direct_tcpip("rat-target", 22, "127.0.0.1", 0)
+        .await
+        .expect("abrir canal directo bastión → rat-target:22");
+
+    // 3) SSH sobre el canal (client::connect_stream, como en la app)
+    let mut target = client::connect_stream(config, channel.into_stream(), Trusting)
+        .await
+        .expect("handshake SSH con el destino a través del bastión");
+    assert!(
+        target
+            .authenticate_password(USER, PASS)
+            .await
+            .unwrap()
+            .success(),
+        "auth en el destino a través del bastión"
+    );
+
+    // 4) exec en el destino: su hostname prueba que llegamos AL DESTINO, no al bastión
+    let mut ch = target.channel_open_session().await.unwrap();
+    ch.exec(true, "hostname").await.unwrap();
+    let out = drain(&mut ch).await;
+    assert!(
+        out.contains("destino-tras-bastion"),
+        "el hostname del destino vía bastión debería ser 'destino-tras-bastion': {out:?}"
     );
 }
