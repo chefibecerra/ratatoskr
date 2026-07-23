@@ -375,12 +375,17 @@
         <div class="card reveal">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="16" cy="18" r="2" fill="currentColor" stroke="none"/></svg></span>
           <h3>Túneles de puertos</h3>
-          <p>Reenvío de puertos con interfaz: llega a una base de datos o panel interno a través de SSH, sin memorizar <span class="mono">-L</span>.</p>
+          <p>Los tres modos con interfaz: local <span class="mono">-L</span>, remoto <span class="mono">-R</span> y dinámico <span class="mono">-D</span> (proxy SOCKS5). Sin memorizar banderas.</p>
         </div>
         <div class="card reveal">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h6l2 2h8v10H4z"/><path d="m9 13 2 2 4-4"/></svg></span>
           <h3>Jump host / bastión</h3>
           <p>Conecta a través de una máquina puente, en cadena y con detección de ciclos. El acceso corporativo por bastión, resuelto.</p>
+        </div>
+        <div class="card reveal">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/><path d="M9 12h6M12 9v6"/></svg></span>
+          <h3>Reenvío del agente</h3>
+          <p>Usa tu <span class="mono">ssh-agent</span> local en el servidor para saltar a otras máquinas sin copiar la clave privada. Se activa por host.</p>
         </div>
         <div class="card reveal">
           <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="8" height="16" rx="1"/><rect x="13" y="4" width="8" height="16" rx="1"/></svg></span>

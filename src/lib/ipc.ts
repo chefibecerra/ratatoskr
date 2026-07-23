@@ -107,8 +107,11 @@ export const sftpRename = (sftpId: string, from: string, to: string) =>
 export const sftpDisconnect = (sftpId: string) =>
   invoke<void>("sftp_disconnect", { sftpId });
 
+export type TunnelKind = "local" | "remote" | "dynamic";
+
 export const tunnelOpen = (
   tunnelId: string,
+  kind: TunnelKind,
   host: Host,
   localPort: number,
   remoteHost: string,
@@ -116,6 +119,7 @@ export const tunnelOpen = (
 ) =>
   invoke<void>("tunnel_open", {
     tunnelId,
+    kind,
     host,
     localPort,
     remoteHost,

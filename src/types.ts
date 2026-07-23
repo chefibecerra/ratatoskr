@@ -13,6 +13,7 @@ export interface Host {
   group: string | null;
   jump_host_id: string | null;
   login_commands: string[];
+  agent_forward: boolean;
 }
 
 export type SessionStatus = "connecting" | "connected" | "closed" | "error";

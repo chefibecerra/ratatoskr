@@ -26,10 +26,12 @@ estética minimalista. Sin cuentas de terceros, sin telemetría, sin texto plano
   y `⌥` como Meta. tmux, vim, htop y compañía funcionan tal cual.
 - **SFTP integrado** — explorador de archivos remoto: navegar, subir, bajar, editar sin descargar, crear carpetas,
   renombrar y eliminar, sin herramientas externas.
-- **Túneles de puertos** — reenvío local (`-L`) con interfaz: llega a una base de datos o
-  panel interno a través de SSH sin memorizar banderas.
+- **Túneles de puertos** — los tres modos con interfaz: local (`-L`), remoto (`-R`) y
+  dinámico (`-D`, proxy SOCKS5). Llega a una base de datos o panel interno sin memorizar banderas.
 - **Jump host / bastión** — conexión a través de una máquina puente (ProxyJump), en cadena
   y con detección de ciclos. El acceso corporativo por bastión, resuelto.
+- **Reenvío del agente SSH** (`-A`) — usa tu `ssh-agent` local en el servidor para saltar a
+  otras máquinas sin copiar la clave privada. Se activa por host.
 - **Paneles divididos y broadcast** — varias sesiones en una rejilla y un comando que se
   ejecuta en todas a la vez.
 - **Vault cifrado zero-knowledge** — Argon2id + ChaCha20-Poly1305. Tus contraseñas y claves
@@ -99,12 +101,14 @@ está cubierta con tests unitarios.
 - [x] Terminal, hosts, sesiones en pestañas
 - [x] Vault cifrado con master password y auto-bloqueo
 - [x] Verificación TOFU de claves de servidor
-- [x] SFTP, túneles, jump host, paneles divididos, broadcast
-- [x] Editar archivos remotos con doble clic
+- [x] SFTP, jump host, paneles divididos, broadcast
+- [x] Editar archivos remotos con doble clic y resaltado de sintaxis
+- [x] Túneles local (`-L`), remoto (`-R`) y dinámico (`-D`, SOCKS)
+- [x] Reenvío del agente SSH (`-A`)
+- [x] Icono en la barra de menú con conexión rápida (cierre a bandeja)
 - [x] Actualizaciones automáticas firmadas
 - [x] Instaladores y portables para las tres plataformas
 - [ ] Sincronización entre dispositivos (el vault ya viaja por archivo; falta el transporte)
-- [ ] Túneles remotos (`-R`) y dinámicos (SOCKS)
 - [ ] Firma de código (Apple / Authenticode)
 
 ## Licencia

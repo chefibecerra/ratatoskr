@@ -9,6 +9,23 @@ import { useHosts } from "@/stores/hosts";
 import { useTunnels, type TunnelDef } from "@/stores/tunnels";
 import { cn } from "@/lib/utils";
 
+const KIND_BADGE: Record<string, { tag: string; title: string }> = {
+  local: { tag: "L", title: "Local (-L)" },
+  remote: { tag: "R", title: "Remoto (-R)" },
+  dynamic: { tag: "D", title: "Dinámico (-D, SOCKS)" },
+};
+
+function routeText(def: TunnelDef): string {
+  switch (def.kind) {
+    case "remote":
+      return `servidor:${def.remotePort} → ${def.remoteHost}:${def.localPort}`;
+    case "dynamic":
+      return `SOCKS5 en localhost:${def.localPort}`;
+    default:
+      return `localhost:${def.localPort} → ${def.remoteHost}:${def.remotePort}`;
+  }
+}
+
 function TunnelRow({ def }: { def: TunnelDef }) {
   const active = useTunnels((s) => s.active[def.id] ?? false);
   const error = useTunnels((s) => s.error[def.id]);
@@ -36,11 +53,19 @@ function TunnelRow({ def }: { def: TunnelDef }) {
         )}
       />
       <div className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] leading-5 font-medium">
-          {def.label}
+        <span className="flex items-center gap-1.5">
+          <span
+            className="shrink-0 rounded bg-muted px-1 font-mono text-[9px] leading-4 text-muted-foreground"
+            title={(KIND_BADGE[def.kind ?? "local"] ?? KIND_BADGE.local).title}
+          >
+            {(KIND_BADGE[def.kind ?? "local"] ?? KIND_BADGE.local).tag}
+          </span>
+          <span className="truncate text-[13px] leading-5 font-medium">
+            {def.label}
+          </span>
         </span>
         <span className="block truncate font-mono text-[10px] leading-4 text-muted-foreground">
-          localhost:{def.localPort} → {def.remoteHost}:{def.remotePort}
+          {routeText(def)}
         </span>
         {error && (
           <span className="block truncate text-[10px] text-destructive">

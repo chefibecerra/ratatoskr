@@ -171,6 +171,7 @@ export function HostsPanel() {
           group: null,
           jump_host_id: null,
           login_commands: [],
+          agent_forward: false,
         });
       }
       toast.success(

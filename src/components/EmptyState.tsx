@@ -71,6 +71,7 @@ export function EmptyState() {
         group: null,
         jump_host_id: null,
         login_commands: [],
+        agent_forward: false,
       });
     }
   };

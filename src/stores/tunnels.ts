@@ -2,7 +2,7 @@ import { listen } from "@tauri-apps/api/event";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import { tunnelClose, tunnelOpen } from "@/lib/ipc";
+import { tunnelClose, tunnelOpen, type TunnelKind } from "@/lib/ipc";
 import type { Host } from "@/types";
 
 /** Definición persistida de un túnel; el estado "activo" es efímero. */
@@ -10,6 +10,8 @@ export interface TunnelDef {
   id: string;
   hostId: string;
   label: string;
+  /** local (-L), remote (-R) o dynamic (-D, SOCKS). Ausente = local (legado). */
+  kind?: TunnelKind;
   localPort: number;
   remoteHost: string;
   remotePort: number;
@@ -57,6 +59,7 @@ export const useTunnels = create<TunnelsState>()(
           try {
             await tunnelOpen(
               def.id,
+              def.kind ?? "local",
               host,
               def.localPort,
               def.remoteHost,

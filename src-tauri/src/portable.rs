@@ -73,6 +73,7 @@ mod tests {
             group: None,
             jump_host_id: None,
             login_commands: vec![],
+            agent_forward: false,
         }
     }
 

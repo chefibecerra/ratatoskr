@@ -37,6 +37,29 @@ pub struct ClientHandler {
     host_key: String,
     /// motivo del rechazo, para construir un error legible tras el fallo
     rejection: Arc<StdMutex<Option<String>>>,
+    /// destino local (host, puerto) al que puentear los canales forwarded-tcpip
+    /// que abre el servidor en un túnel remoto (-R). None en el resto de usos.
+    forward_to: Arc<StdMutex<Option<(String, u16)>>>,
+}
+
+/// Puentea un canal de reenvío de agente (-A) al ssh-agent local. En Unix se
+/// conecta al socket de $SSH_AUTH_SOCK; en Windows aún no se soporta.
+#[cfg(unix)]
+fn bridge_agent(channel: russh::Channel<client::Msg>) {
+    let Some(sock) = std::env::var_os("SSH_AUTH_SOCK") else {
+        return;
+    };
+    tokio::spawn(async move {
+        let mut stream = channel.into_stream();
+        if let Ok(mut agent) = tokio::net::UnixStream::connect(&sock).await {
+            let _ = tokio::io::copy_bidirectional(&mut stream, &mut agent).await;
+        }
+    });
+}
+
+#[cfg(not(unix))]
+fn bridge_agent(_channel: russh::Channel<client::Msg>) {
+    // El reenvío de agente en Windows usaría el named pipe de OpenSSH; pendiente.
 }
 
 impl client::Handler for ClientHandler {
@@ -63,6 +86,43 @@ impl client::Handler for ClientHandler {
                 Ok(false)
             }
         }
+    }
+
+    /// El servidor abre un canal hacia nosotros por un túnel remoto (-R):
+    /// alguien se conectó al puerto que reenviamos. Lo puenteamos al destino
+    /// local configurado.
+    async fn server_channel_open_forwarded_tcpip(
+        &mut self,
+        channel: russh::Channel<client::Msg>,
+        _connected_address: &str,
+        _connected_port: u32,
+        _originator_address: &str,
+        _originator_port: u32,
+        reply: client::ChannelOpenHandle,
+        _session: &mut client::Session,
+    ) -> Result<(), Self::Error> {
+        reply.accept().await;
+        if let Some((host, port)) = self.forward_to.lock().unwrap().clone() {
+            tokio::spawn(async move {
+                let mut stream = channel.into_stream();
+                if let Ok(mut local) = tokio::net::TcpStream::connect((host.as_str(), port)).await {
+                    let _ = tokio::io::copy_bidirectional(&mut stream, &mut local).await;
+                }
+            });
+        }
+        Ok(())
+    }
+
+    /// El servidor pide reenvío de agente (-A): puenteamos al ssh-agent local.
+    async fn server_channel_open_agent_forward(
+        &mut self,
+        channel: russh::Channel<client::Msg>,
+        reply: client::ChannelOpenHandle,
+        _session: &mut client::Session,
+    ) -> Result<(), Self::Error> {
+        reply.accept().await;
+        bridge_agent(channel);
+        Ok(())
     }
 }
 
@@ -108,6 +168,9 @@ pub struct Connection {
     pub handle: client::Handle<ClientHandler>,
     #[allow(dead_code)]
     jumps: Vec<client::Handle<ClientHandler>>,
+    /// Compartido con el ClientHandler del último salto: fijar aquí el destino
+    /// local activa el puente de los túneles remotos (-R).
+    pub forward_to: Arc<StdMutex<Option<(String, u16)>>>,
 }
 
 /// Construye la cadena de bastiones de un host siguiendo jump_host_id, del más
@@ -188,12 +251,14 @@ async fn connect_hop(
     config: Arc<client::Config>,
     host: &Host,
     via: Option<&client::Handle<ClientHandler>>,
+    forward_to: Arc<StdMutex<Option<(String, u16)>>>,
 ) -> Result<client::Handle<ClientHandler>, String> {
     let rejection = Arc::new(StdMutex::new(None::<String>));
     let handler = ClientHandler {
         app: app.clone(),
         host_key: format!("{}:{}", host.hostname, host.port),
         rejection: rejection.clone(),
+        forward_to,
     };
 
     let mut handle = match via {
@@ -256,12 +321,27 @@ pub async fn connect_authenticated(
 
     let mut jumps: Vec<client::Handle<ClientHandler>> = Vec::new();
     for hop in &hops {
-        let handle = connect_hop(app, config.clone(), hop, jumps.last()).await?;
+        // Los bastiones no reciben canales del servidor: destino vacío.
+        let handle = connect_hop(
+            app,
+            config.clone(),
+            hop,
+            jumps.last(),
+            Arc::new(StdMutex::new(None)),
+        )
+        .await?;
         jumps.push(handle);
     }
 
-    let handle = connect_hop(app, config.clone(), host, jumps.last()).await?;
-    Ok(Connection { handle, jumps })
+    // El último salto sí puede recibir canales (-R): comparte este Arc para que
+    // el túnel remoto pueda fijar el destino local tras conectar.
+    let forward_to = Arc::new(StdMutex::new(None));
+    let handle = connect_hop(app, config.clone(), host, jumps.last(), forward_to.clone()).await?;
+    Ok(Connection {
+        handle,
+        jumps,
+        forward_to,
+    })
 }
 
 #[tauri::command]
@@ -303,6 +383,13 @@ pub async fn ssh_connect(
         .request_pty(false, "xterm-256color", cols, rows, 0, 0, &[])
         .await
         .map_err(|e| e.to_string())?;
+
+    // Reenvío del ssh-agent (-A): se pide sobre el canal de la sesión. Si el
+    // servidor no lo permite, lo ignora sin romper nada (want_reply=false).
+    if host.agent_forward {
+        let _ = channel.agent_forward(false).await;
+    }
+
     channel
         .request_shell(true)
         .await
@@ -431,6 +518,7 @@ mod tests {
             group: None,
             jump_host_id: jump.map(|s| s.into()),
             login_commands: vec![],
+            agent_forward: false,
         }
     }
 

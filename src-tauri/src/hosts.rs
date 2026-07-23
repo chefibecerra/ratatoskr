@@ -33,6 +33,10 @@ pub struct Host {
     /// comandos ejecutados automáticamente al abrir la sesión
     #[serde(default)]
     pub login_commands: Vec<String>,
+    /// reenviar el ssh-agent local a la sesión (-A); útil para saltar de
+    /// servidor en servidor sin copiar la clave privada
+    #[serde(default)]
+    pub agent_forward: bool,
 }
 
 #[tauri::command]

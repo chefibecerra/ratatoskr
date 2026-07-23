@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -46,6 +47,7 @@ interface FormState {
   group: string;
   jumpHostId: string;
   loginCommands: string;
+  agentForward: boolean;
 }
 
 const NO_JUMP = "__none__";
@@ -63,6 +65,7 @@ const EMPTY: FormState = {
   group: "",
   jumpHostId: NO_JUMP,
   loginCommands: "",
+  agentForward: false,
 };
 
 function toForm(host: Host): FormState {
@@ -79,6 +82,7 @@ function toForm(host: Host): FormState {
     group: host.group ?? "",
     jumpHostId: host.jump_host_id ?? NO_JUMP,
     loginCommands: host.login_commands.join("\n"),
+    agentForward: host.agent_forward,
   };
 }
 
@@ -105,7 +109,8 @@ export function HostForm({ open, onOpenChange, host }: HostFormProps) {
         !!host &&
         (host.tags.length > 0 ||
           host.jump_host_id !== null ||
-          host.login_commands.length > 0);
+          host.login_commands.length > 0 ||
+          host.agent_forward);
       setShowAdvanced(hasAdvanced);
     }
   }, [open, host, loadKeys]);
@@ -152,6 +157,7 @@ export function HostForm({ open, onOpenChange, host }: HostFormProps) {
           .split("\n")
           .map((c) => c.trim())
           .filter(Boolean),
+        agent_forward: form.agentForward,
       });
       onOpenChange(false);
     } catch (e) {
@@ -375,6 +381,22 @@ export function HostForm({ open, onOpenChange, host }: HostFormProps) {
                 <p className="text-[11px] text-muted-foreground">
                   Uno por línea. Se ejecutan al abrir la sesión.
                 </p>
+              </div>
+
+              <div className="flex items-start justify-between gap-3">
+                <div className="grid gap-0.5">
+                  <Label htmlFor="agent-forward">Reenviar el agente SSH (-A)</Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Usa tu ssh-agent local en el servidor para saltar a otras
+                    máquinas sin copiar la clave. Actívalo solo en hosts de
+                    confianza.
+                  </p>
+                </div>
+                <Switch
+                  id="agent-forward"
+                  checked={form.agentForward}
+                  onCheckedChange={(v) => patch({ agentForward: v })}
+                />
               </div>
             </div>
           )}
