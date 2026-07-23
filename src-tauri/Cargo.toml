@@ -1,6 +1,6 @@
 [package]
 name = "ratatoskr"
-version = "0.2.0"
+version = "0.2.1"
 description = "Cliente SSH propio, rápido y bonito"
 authors = ["chefibecerra"]
 edition = "2021"
