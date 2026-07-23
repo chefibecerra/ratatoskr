@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Columns2, Square, X } from "lucide-react";
+import { Columns2, FolderOpen, Square, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useSessions } from "@/stores/sessions";
+import { useSftp } from "@/stores/sftp";
 import { useUi } from "@/stores/ui";
 import { cn } from "@/lib/utils";
 import type { SessionStatus } from "@/types";
@@ -28,6 +29,8 @@ export function SessionTabs() {
   const requestClose = useSessions((s) => s.requestClose);
   const split = useUi((s) => s.splitView);
   const setSplit = useUi((s) => s.setSplitView);
+  const browseFiles = useSftp((s) => s.connect);
+  const activeSession = sessions.find((s) => s.id === activeId);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
 
@@ -101,12 +104,24 @@ export function SessionTabs() {
       ))}
       </div>
 
+      {activeSession && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="ml-1 size-7 shrink-0 text-muted-foreground hover:text-foreground"
+          onClick={() => void browseFiles(activeSession.host)}
+          title={`Explorar archivos de ${activeSession.host.name}`}
+        >
+          <FolderOpen className="size-4" />
+        </Button>
+      )}
+
       {sessions.length > 1 && (
         <Button
           variant="ghost"
           size="icon"
           className={cn(
-            "ml-1 size-7 shrink-0",
+            "size-7 shrink-0",
             split
               ? "text-primary"
               : "text-muted-foreground hover:text-foreground",

@@ -4,6 +4,9 @@ import type { HistoryEntry, Host, KnownHost, Snippet, SshKey } from "@/types";
 
 export const listHosts = () => invoke<Host[]>("list_hosts");
 
+export const updateTrayMenu = (hosts: { id: string; name: string }[]) =>
+  invoke<void>("update_tray_menu", { hosts });
+
 export const saveHost = (host: Host) => invoke<Host>("save_host", { host });
 
 export const deleteHost = (id: string) => invoke<void>("delete_host", { id });

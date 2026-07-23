@@ -17,7 +17,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { useAutolock } from "@/hooks/use-autolock";
 import { useShortcuts } from "@/hooks/use-shortcuts";
+import { updateTrayMenu } from "@/lib/ipc";
 import { getTheme } from "@/lib/terminal-themes";
+import { useHosts } from "@/stores/hosts";
+import { useSessions } from "@/stores/sessions";
 import { useSettings } from "@/stores/settings";
 import { useUi } from "@/stores/ui";
 import { useUpdater } from "@/stores/updater";
@@ -28,6 +31,7 @@ function App() {
   const opacity = useSettings((s) => s.opacity);
   const vaultStatus = useVault((s) => s.status);
   const checkVault = useVault((s) => s.check);
+  const hosts = useHosts((s) => s.hosts);
   const ui = useUi();
 
   useShortcuts();
@@ -44,6 +48,19 @@ function App() {
     const unlisten = listen("open-settings", () =>
       useUi.getState().setSettingsOpen(true),
     );
+    return () => void unlisten.then((fn) => fn());
+  }, []);
+
+  // conexión rápida desde el tray: sincroniza el menú y escucha los clics
+  useEffect(() => {
+    void updateTrayMenu(hosts.map((h) => ({ id: h.id, name: h.name })));
+  }, [hosts]);
+
+  useEffect(() => {
+    const unlisten = listen<string>("tray-connect", ({ payload }) => {
+      const host = useHosts.getState().hosts.find((h) => h.id === payload);
+      if (host) useSessions.getState().connect(host);
+    });
     return () => void unlisten.then((fn) => fn());
   }, []);
 

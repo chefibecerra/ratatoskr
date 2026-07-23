@@ -26,6 +26,46 @@ fn show_main(app: &tauri::AppHandle) {
     }
 }
 
+#[derive(serde::Deserialize)]
+pub struct TrayHost {
+    id: String,
+    name: String,
+}
+
+/// Reconstruye el menú del tray con los hosts para conexión rápida. Lo llama el
+/// frontend al cargar/cambiar los hosts (y al bloquear el vault, con lista vacía).
+#[tauri::command]
+fn update_tray_menu(app: tauri::AppHandle, hosts: Vec<TrayHost>) -> Result<(), String> {
+    let show = MenuItemBuilder::with_id("tray_show", "Mostrar Ratatoskr")
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+    let quit = MenuItemBuilder::with_id("tray_quit", "Salir")
+        .build(&app)
+        .map_err(|e| e.to_string())?;
+
+    // hasta 12 hosts para no hacer un menú kilométrico
+    let host_items: Vec<_> = hosts
+        .iter()
+        .take(12)
+        .map(|h| MenuItemBuilder::with_id(format!("host:{}", h.id), &h.name).build(&app))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    let mut mb = MenuBuilder::new(&app).item(&show);
+    if !host_items.is_empty() {
+        mb = mb.separator();
+        for item in &host_items {
+            mb = mb.item(item);
+        }
+    }
+    let menu = mb.separator().item(&quit).build().map_err(|e| e.to_string())?;
+
+    if let Some(tray) = app.tray_by_id("main") {
+        tray.set_menu(Some(menu)).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -99,10 +139,19 @@ pub fn run() {
                 .menu(&tray_menu)
                 // clic izquierdo abre la ventana; el menú sale con clic derecho
                 .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| match event.id().as_ref() {
-                    "tray_show" => show_main(app),
-                    "tray_quit" => app.exit(0),
-                    _ => {}
+                .on_menu_event(|app, event| {
+                    let id = event.id().as_ref();
+                    match id {
+                        "tray_show" => show_main(app),
+                        "tray_quit" => app.exit(0),
+                        _ => {
+                            // conexión rápida: item "host:<id>" → conectar
+                            if let Some(host_id) = id.strip_prefix("host:") {
+                                show_main(app);
+                                let _ = app.emit("tray-connect", host_id.to_string());
+                            }
+                        }
+                    }
                 })
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
@@ -181,7 +230,8 @@ pub fn run() {
             sftp::sftp_rename,
             sftp::sftp_disconnect,
             tunnel::tunnel_open,
-            tunnel::tunnel_close
+            tunnel::tunnel_close,
+            update_tray_menu
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
