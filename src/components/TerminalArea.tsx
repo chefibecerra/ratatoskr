@@ -36,8 +36,8 @@ export function TerminalArea() {
   return (
     <div
       className={cn(
-        "min-h-0 flex-1 bg-terminal",
-        useSplit ? cn("grid gap-px", gridCols(sessions.length)) : "block",
+        "relative min-h-0 flex-1 bg-terminal",
+        useSplit && cn("grid gap-px", gridCols(sessions.length)),
       )}
     >
       {sessions.map((session) => {
@@ -47,7 +47,9 @@ export function TerminalArea() {
             key={session.id}
             onMouseDownCapture={() => useSplit && setActive(session.id)}
             className={cn(
-              "relative min-h-0 min-w-0",
+              "min-h-0 min-w-0",
+              // único: cada terminal llena el área (absoluto); split: celda de rejilla
+              useSplit ? "relative" : "absolute inset-0",
               visible ? "block" : "hidden",
               useSplit &&
                 session.id === activeId &&
