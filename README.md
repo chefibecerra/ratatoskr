@@ -24,7 +24,7 @@ estética minimalista. Sin cuentas de terceros, sin telemetría, sin texto plano
 
 - **Terminal completo** — PTY real con `xterm-256color`, truecolor, ratón, redimensionado
   y `⌥` como Meta. tmux, vim, htop y compañía funcionan tal cual.
-- **SFTP integrado** — explorador de archivos remoto: navegar, subir, bajar, crear carpetas,
+- **SFTP integrado** — explorador de archivos remoto: navegar, subir, bajar, editar sin descargar, crear carpetas,
   renombrar y eliminar, sin herramientas externas.
 - **Túneles de puertos** — reenvío local (`-L`) con interfaz: llega a una base de datos o
   panel interno a través de SSH sin memorizar banderas.
@@ -46,14 +46,17 @@ estética minimalista. Sin cuentas de terceros, sin telemetría, sin texto plano
 
 ## Instalación
 
-Descarga el instalador de tu plataforma desde la
+Descarga desde la
 [**página de releases**](https://github.com/chefibecerra/ratatoskr/releases/latest):
 
-| Plataforma | Archivo |
-|-----------|---------|
-| macOS (Apple Silicon / Intel) | `.dmg` |
-| Windows | `.exe` (instalador) o `.msi` |
-| Linux | `.AppImage`, `.deb` o `.rpm` |
+| Plataforma | Instalador | Portable (sin instalar) |
+|-----------|-----------|--------------------------|
+| macOS (Apple Silicon / Intel) | `.dmg` | `.app.tar.gz` |
+| Windows | `.exe` o `.msi` | `_portable.exe` |
+| Linux | `.deb` o `.rpm` | `.AppImage` |
+
+Los **portables** se ejecutan sin instalación ni permisos de administrador (el `.exe`
+de Windows solo necesita WebView2, incluido en Windows 10/11).
 
 > **macOS**: las compilaciones aún no están firmadas con Apple. Si Gatekeeper se queja,
 > ejecuta `xattr -cr /Applications/Ratatoskr.app` una vez tras instalar.
@@ -97,10 +100,12 @@ está cubierta con tests unitarios.
 - [x] Vault cifrado con master password y auto-bloqueo
 - [x] Verificación TOFU de claves de servidor
 - [x] SFTP, túneles, jump host, paneles divididos, broadcast
+- [x] Editar archivos remotos con doble clic
 - [x] Actualizaciones automáticas firmadas
+- [x] Instaladores y portables para las tres plataformas
 - [ ] Sincronización entre dispositivos (el vault ya viaja por archivo; falta el transporte)
-- [ ] Editar archivos remotos con doble clic
 - [ ] Túneles remotos (`-R`) y dinámicos (SOCKS)
+- [ ] Firma de código (Apple / Authenticode)
 
 ## Licencia
 
