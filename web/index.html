@@ -10,133 +10,146 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg: #0b0b0d;
-      --surface: #161618;
-      --surface-2: #1d1d20;
-      --line: rgba(255,255,255,0.08);
-      --line-2: rgba(255,255,255,0.14);
-      --text: #f5f5f7;
-      --muted: #8a8a90;
-      --faint: #5c5c63;
-      --accent: #e0a868;
-      --accent-2: #c9743a;
-      --green: #5fd39a;
-      --blue: #7fb4f5;
+      --bg: #0a0a0c; --surface: #161618; --surface-2: #1d1d20; --elevated: #26262a;
+      --line: rgba(255,255,255,0.08); --line-2: rgba(255,255,255,0.14);
+      --text: #f5f5f7; --muted: #8a8a90; --faint: #5c5c63;
+      --accent: #e0a868; --green: #5fd39a; --blue: #7fb4f5; --purple: #c9a2f5;
       --font: -apple-system, "SF Pro Display", "Inter", system-ui, sans-serif;
       --mono: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
       --maxw: 1120px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
-    body {
-      background: var(--bg); color: var(--text); font-family: var(--font);
-      font-size: 17px; line-height: 1.6; letter-spacing: -0.011em; overflow-x: hidden;
-    }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 17px; line-height: 1.6; letter-spacing: -0.011em; overflow-x: hidden; }
     a { color: inherit; text-decoration: none; }
     .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
-    .muted { color: var(--muted); }
-
-    /* reveal */
-    .reveal { opacity: 0; transform: translateY(16px); transition: opacity .7s cubic-bezier(.22,1,.36,1), transform .7s cubic-bezier(.22,1,.36,1); }
+    .reveal { opacity: 0; transform: translateY(12px); transition: opacity .5s ease, transform .55s cubic-bezier(.22,1,.36,1); }
     .reveal.in { opacity: 1; transform: none; }
+
+    /* entrada del hero: rápida y sutil, sin florituras */
+    @keyframes floatUp { from { opacity: 0; transform: translateY(13px); } to { opacity: 1; transform: none; } }
+    .hero .wrap > * { animation: floatUp .58s cubic-bezier(.22,1,.36,1) both; }
+    .hero .wrap > .hero-mark { animation-delay: .02s; }
+    .hero .wrap > h1 { animation-delay: .07s; }
+    .hero .wrap > .sub { animation-delay: .13s; }
+    .hero .wrap > .hero-cta { animation-delay: .19s; }
+    .hero .wrap > .shot { animation-delay: .27s; }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } .reveal { opacity: 1; transform: none; } }
 
     /* nav */
     .nav { position: sticky; top: 0; z-index: 50; border-bottom: 1px solid transparent; transition: background .3s, border-color .3s, backdrop-filter .3s; }
-    .nav.scrolled { background: rgba(11,11,13,.72); backdrop-filter: saturate(180%) blur(18px); -webkit-backdrop-filter: saturate(180%) blur(18px); border-bottom: 1px solid var(--line); }
-    .nav-in { height: 60px; display: flex; align-items: center; justify-content: space-between; }
+    .nav.scrolled { background: rgba(10,10,12,.72); backdrop-filter: saturate(180%) blur(18px); -webkit-backdrop-filter: saturate(180%) blur(18px); border-bottom: 1px solid var(--line); }
+    .nav-in { height: 62px; display: flex; align-items: center; justify-content: space-between; }
     .brand { display: flex; align-items: center; gap: 9px; }
-    .brand svg { width: 24px; height: 24px; color: var(--text); }
+    .brand .lg svg { width: 24px; height: 24px; color: var(--text); display: block; }
     .brand b { font-weight: 600; font-size: 16px; letter-spacing: -0.02em; }
     .nav-links { display: flex; align-items: center; gap: 26px; }
     .nav-links a.l { color: var(--muted); font-size: 14.5px; font-weight: 500; transition: color .2s; }
     .nav-links a.l:hover { color: var(--text); }
-
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--font); font-weight: 600; font-size: 14.5px; border-radius: 10px; padding: 9px 17px; cursor: pointer; border: 1px solid transparent; transition: transform .15s, box-shadow .2s, opacity .2s, background .2s, border-color .2s; }
     .btn svg { width: 16px; height: 16px; }
     .btn-primary { background: var(--accent); color: #1a1205; box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
     .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(224,168,104,.24); }
-    .btn-ghost { border-color: var(--line-2); color: var(--text); }
-    .btn-ghost:hover { border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.03); }
-    .btn-lg { padding: 12px 22px; font-size: 15.5px; border-radius: 12px; }
+    .btn-sm { padding: 7px 15px; font-size: 14px; }
+    .btn-lg { padding: 13px 24px; font-size: 15.5px; border-radius: 12px; }
 
     /* hero */
-    .hero { position: relative; text-align: center; padding: 96px 0 48px; }
-    .glow { position: absolute; left: 50%; top: 40px; width: 720px; height: 460px; transform: translateX(-50%); pointer-events: none; z-index: 0; background: radial-gradient(50% 50% at 50% 50%, rgba(224,168,104,.14), rgba(224,168,104,.04) 45%, transparent 70%); }
-    .hero > * { position: relative; z-index: 1; }
-    .hero-mark { width: 60px; height: 60px; margin: 0 auto 30px; color: var(--text); opacity: .95; }
-    .hero h1 { font-size: clamp(40px, 6.4vw, 72px); line-height: 1.04; letter-spacing: -0.038em; font-weight: 700; max-width: 15ch; margin: 0 auto 22px; }
+    .hero { position: relative; text-align: center; padding: 104px 0 60px; }
+    .glow { position: absolute; left: 50%; top: 10px; width: 760px; height: 480px; transform: translateX(-50%); pointer-events: none; z-index: 0; background: radial-gradient(50% 50% at 50% 42%, rgba(224,168,104,.16), rgba(224,168,104,.04) 46%, transparent 70%); }
+    .hero > .wrap { position: relative; z-index: 1; }
+    .hero-mark { width: 58px; height: 58px; margin: 0 auto 30px; color: var(--text); opacity: .95; }
+    .hero-mark svg { width: 100%; height: 100%; display: block; }
+    .hero h1 { font-size: clamp(40px, 6.2vw, 70px); line-height: 1.05; letter-spacing: -0.038em; font-weight: 700; max-width: 16ch; margin: 0 auto 22px; }
     .hero h1 .am { color: var(--accent); }
-    .hero .sub { font-size: clamp(16px,2vw,19px); color: var(--muted); max-width: 48ch; margin: 0 auto 34px; line-height: 1.5; }
+    .hero .sub { font-size: clamp(16px,2vw,19px); color: var(--muted); max-width: 50ch; margin: 0 auto 36px; line-height: 1.5; }
     .hero-cta { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
     .tlink { display: inline-flex; align-items: center; gap: 6px; color: var(--text); font-weight: 500; font-size: 14.5px; }
     .tlink:hover { color: var(--accent); }
     .tlink svg { width: 16px; height: 16px; }
 
-    /* terminal mockup */
-    .term { max-width: 840px; margin: 60px auto 0; text-align: left; background: linear-gradient(180deg,#161618,#121214); border: 1px solid var(--line); border-radius: 15px; overflow: hidden; box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 30px 70px rgba(0,0,0,.55); }
-    .term-bar { display: flex; align-items: center; gap: 7px; padding: 12px 15px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
-    .d { width: 11px; height: 11px; border-radius: 50%; }
-    .d.r{background:#ff5f57}.d.y{background:#febc2e}.d.g{background:#28c840}
-    .term-title { flex: 1; text-align: center; margin-right: 46px; font-family: var(--mono); font-size: 12px; color: var(--faint); }
-    .term-body { padding: 20px 22px 24px; font-family: var(--mono); font-size: 13.5px; line-height: 1.85; }
-    .term-body .ln { white-space: pre-wrap; }
-    .g{color:var(--green)} .a{color:var(--accent)} .b{color:var(--blue)} .m{color:var(--muted)} .w{color:var(--text)}
-    .cur { display: inline-block; width: 8px; height: 15px; background: var(--accent); vertical-align: text-bottom; margin-left: 2px; border-radius: 1px; animation: bl 1.1s step-end infinite; }
+    /* ===== App mockup (la app real) ===== */
+    .shot { position: relative; margin: 80px auto 0; max-width: 960px; }
+    .app { display: flex; height: 520px; border: 1px solid var(--line-2); border-radius: 16px; overflow: hidden; background: var(--bg); box-shadow: 0 40px 100px rgba(0,0,0,.6), 0 10px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05); text-align: left; }
+    .side { width: 248px; flex-shrink: 0; background: rgba(22,22,24,.7); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+    .side-head { height: 54px; display: flex; align-items: center; justify-content: center; position: relative; }
+    .side-head .tl { position: absolute; left: 14px; display: flex; gap: 7px; }
+    .side-head .tl i { width: 11px; height: 11px; border-radius: 50%; }
+    .tl .r{background:#ff5f57}.tl .y{background:#febc2e}.tl .g{background:#28c840}
+    .side-head .lg svg { width: 22px; height: 22px; color: var(--text); display: block; }
+    .seg { display: flex; gap: 4px; margin: 2px 12px 10px; background: var(--surface-2); border-radius: 9px; padding: 4px; }
+    .seg span { flex: 1; text-align: center; font-size: 12.5px; font-weight: 500; color: var(--muted); padding: 5px; border-radius: 6px; }
+    .seg span.on { background: var(--elevated); color: var(--text); }
+    .side .search { margin: 0 12px 10px; height: 34px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.03); display: flex; align-items: center; gap: 8px; padding: 0 11px; color: var(--faint); font-size: 13px; }
+    .hosts { flex: 1; padding: 2px 8px; display: flex; flex-direction: column; gap: 2px; }
+    .hc { display: flex; align-items: center; gap: 11px; padding: 8px 9px; border-radius: 11px; border: 1px solid transparent; }
+    .hc.sel { background: rgba(255,255,255,.04); border-color: var(--line); }
+    .hc .av { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; font-weight: 700; font-size: 14px; color: rgba(0,0,0,.82); flex-shrink: 0; }
+    .hc .t b { display: block; font-size: 13.5px; font-weight: 500; letter-spacing: -0.01em; }
+    .hc .t small { display: block; font-size: 11.5px; color: var(--muted); font-family: var(--mono); }
+    .side-foot { padding: 11px; border-top: 1px solid var(--line); }
+    .newbtn { display: block; text-align: center; background: var(--accent); color: #1a1205; font-weight: 600; font-size: 13.5px; padding: 9px; border-radius: 9px; }
+
+    .main { flex: 1; display: flex; flex-direction: column; background: #0c0c0e; min-width: 0; }
+    .tabs { height: 42px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 6px; padding: 0 10px; background: rgba(22,22,24,.5); }
+    .tab { font-size: 13px; padding: 5px 12px; border-radius: 9px; border: 1px solid transparent; display: flex; align-items: center; gap: 7px; }
+    .tab.on { background: var(--surface-2); border-color: var(--line); }
+    .tab .dotg { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+    .tabs .files { margin-left: auto; font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    .term { flex: 1; padding: 16px 18px; font-family: var(--mono); font-size: 13px; line-height: 1.85; overflow: hidden; }
+    .term .ln { white-space: pre-wrap; }
+    .g{color:var(--green)}.a{color:var(--accent)}.b{color:var(--blue)}.m{color:var(--muted)}.w{color:var(--text)}
+    .cur { display: inline-block; width: 7.5px; height: 15px; background: var(--accent); vertical-align: text-bottom; margin-left: 2px; border-radius: 1px; animation: bl 1.1s step-end infinite; }
     @keyframes bl { 0%,50%{opacity:1} 50.01%,100%{opacity:0} }
 
     /* sections */
-    section { padding: 92px 0; }
-    .eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; }
-    .h2 { font-size: clamp(28px,4vw,42px); letter-spacing: -0.03em; font-weight: 700; line-height: 1.1; }
-    .lead { color: var(--muted); font-size: 18px; max-width: 46ch; margin-top: 14px; }
+    section { padding: 108px 0; }
+    .eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); margin-bottom: 15px; }
+    .h2 { font-size: clamp(28px,4vw,42px); letter-spacing: -0.03em; font-weight: 700; line-height: 1.12; }
+    .lead { color: var(--muted); font-size: 18px; max-width: 46ch; margin-top: 16px; }
     .center { text-align: center; }
     .center .lead { margin-left: auto; margin-right: auto; }
 
-    /* features */
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 48px; }
-    .card { border: 1px solid var(--line); background: var(--surface); border-radius: 16px; padding: 22px; transition: transform .25s, border-color .25s, background .25s; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 54px; }
+    .card { border: 1px solid var(--line); background: var(--surface); border-radius: 16px; padding: 24px; transition: transform .25s, border-color .25s, background .25s; }
     .card:hover { transform: translateY(-3px); border-color: var(--line-2); background: #18181b; }
     .card .ic { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--surface-2); color: var(--accent); margin-bottom: 16px; }
     .card .ic svg { width: 19px; height: 19px; }
-    .card h3 { font-size: 16.5px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 6px; }
+    .card h3 { font-size: 16.5px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 7px; }
     .card p { color: var(--muted); font-size: 14.5px; line-height: 1.55; }
 
-    /* steps */
-    .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 28px; margin-top: 48px; }
-    .step .n { font-family: var(--mono); font-size: 13px; color: var(--accent); margin-bottom: 10px; }
-    .step h3 { font-size: 18px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.01em; }
+    .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 28px; margin-top: 54px; }
+    .step .n { font-family: var(--mono); font-size: 13px; color: var(--accent); margin-bottom: 12px; }
+    .step h3 { font-size: 18px; font-weight: 600; margin-bottom: 7px; letter-spacing: -0.01em; }
     .step p { color: var(--muted); font-size: 15px; }
 
-    /* download */
-    .dl { position: relative; text-align: center; border: 1px solid var(--line); border-radius: 22px; background: radial-gradient(60% 120% at 50% 0%, rgba(224,168,104,.08), transparent 60%), var(--surface); padding: 64px 24px; overflow: hidden; }
+    .dl { position: relative; text-align: center; border: 1px solid var(--line); border-radius: 22px; background: radial-gradient(60% 130% at 50% 0%, rgba(224,168,104,.08), transparent 58%), var(--surface); padding: 72px 24px; overflow: hidden; }
+    .dl .hero-mark { width: 46px; height: 46px; margin: 0 auto 24px; }
     .dl h2 { font-size: clamp(26px,3.4vw,38px); letter-spacing: -0.03em; font-weight: 700; }
-    .dl p { color: var(--muted); margin: 14px 0 32px; }
+    .dl p { color: var(--muted); margin: 15px 0 34px; }
     .os { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-    .os a { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--line-2); border-radius: 12px; padding: 14px 22px; font-weight: 600; font-size: 15px; transition: transform .15s, border-color .2s, background .2s; }
+    .os a { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--line-2); border-radius: 12px; padding: 14px 24px; font-weight: 600; font-size: 15px; transition: transform .15s, border-color .2s, background .2s; }
     .os a:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.03); }
     .os a svg { width: 22px; height: 22px; }
 
-    /* footer */
-    footer { border-top: 1px solid var(--line); padding: 44px 0; }
+    footer { border-top: 1px solid var(--line); padding: 46px 0; }
     .foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; }
-    .foot .brand svg { width: 22px; height: 22px; }
+    .foot .lg svg { width: 22px; height: 22px; color: var(--text); display: block; }
     .foot small { color: var(--faint); font-size: 13px; }
     .foot .tag { font-family: var(--mono); font-size: 13px; color: var(--muted); }
 
-    @media (max-width: 820px) {
+    @media (max-width: 860px) {
       .grid, .steps { grid-template-columns: 1fr; }
       .nav-links a.l { display: none; }
-      section { padding: 68px 0; }
-      .hero { padding: 72px 0 36px; }
+      section { padding: 76px 0; }
+      .hero { padding: 76px 0 40px; }
+      .shot { overflow-x: auto; }
+      .app { height: 460px; }
     }
   </style>
 </head>
 <body>
 
-  <!-- squirrel logo, reused -->
-  <template id="logo">
-    <svg viewBox="0 0 372 329" fill="currentColor" aria-hidden="true"><g transform="translate(0,329) scale(0.1,-0.1)"><path d="M2473 3276 c-144 -28 -283 -85 -414 -172 -76 -50 -207 -184 -262 -267 -168 -254 -211 -576 -116 -868 24 -75 98 -225 142 -288 24 -36 27 -43 11 -36 -10 4 -91 33 -179 64 -88 32 -188 72 -223 91 -105 56 -206 169 -295 331 -35 63 -36 68 -30 142 7 86 -13 187 -53 272 -27 56 -109 165 -124 165 -6 0 -39 -29 -74 -65 -64 -65 -119 -156 -141 -229 -11 -39 -13 -40 -75 -52 -153 -32 -267 -87 -363 -177 -66 -62 -277 -355 -277 -385 0 -8 21 -45 46 -83 79 -119 169 -166 385 -204 79 -13 103 -22 134 -48 70 -57 136 -253 157 -462 18 -189 -7 -497 -55 -680 -12 -46 -16 -50 -52 -59 -27 -6 -56 -25 -90 -60 -53 -53 -75 -103 -75 -170 0 -36 0 -36 165 -36 191 0 213 6 268 71 21 24 87 142 146 262 107 215 109 218 116 180 9 -48 76 -194 98 -212 23 -19 21 -31 -5 -31 -40 0 -123 -46 -156 -86 -32 -39 -62 -116 -62 -161 0 -24 0 -24 573 -21 555 4 575 5 672 27 393 91 654 283 796 586 60 128 82 235 82 395 0 140 -13 219 -54 329 -27 74 -71 161 -80 161 -10 0 -79 -40 -79 -46 0 -3 13 -31 30 -64 16 -32 42 -99 56 -147 23 -76 27 -107 27 -223 0 -136 -10 -198 -50 -310 -94 -257 -329 -461 -640 -553 -51 -15 -51 -15 -26 21 118 172 178 421 153 628 -24 191 -84 347 -191 497 -31 44 -120 143 -197 221 -178 181 -257 301 -316 480 -92 282 -43 577 134 815 105 141 239 242 403 305 141 54 238 70 387 63 187 -8 329 -55 485 -160 209 -141 362 -406 382 -659 6 -78 6 -78 54 -78 49 0 49 0 49 50 0 106 -40 259 -101 382 -59 121 -106 186 -199 279 -132 130 -277 213 -457 260 -102 27 -336 35 -440 15z m-1520 -753 c43 -80 60 -166 52 -261 -6 -83 -6 -83 41 -170 85 -158 162 -256 255 -326 74 -56 151 -92 309 -146 378 -128 570 -276 689 -532 115 -245 115 -516 -1 -755 -48 -100 -99 -159 -169 -198 -54 -30 -54 -30 -419 -33 -201 -2 -412 -2 -470 0 -105 3 -105 3 -66 33 39 30 41 30 190 35 130 4 151 7 154 21 2 11 -17 29 -57 54 -167 101 -244 258 -219 449 18 131 114 257 245 319 61 29 78 32 168 34 108 1 113 4 114 64 1 34 -16 39 -135 39 -135 0 -235 -35 -342 -119 -60 -48 -141 -158 -170 -233 -11 -29 -37 -96 -58 -148 -57 -148 -231 -491 -265 -522 -28 -27 -34 -28 -129 -28 -55 0 -100 4 -100 9 0 22 63 61 99 61 20 0 44 6 53 13 46 36 108 424 108 671 0 270 -71 550 -167 656 -61 68 -101 87 -240 110 -145 24 -228 61 -272 122 -17 23 -31 48 -31 55 0 15 72 126 155 238 90 122 224 200 398 231 51 9 97 18 103 19 6 2 15 21 19 42 11 60 50 149 86 198 19 24 37 45 40 45 3 0 17 -21 32 -47z"/><path d="M481 2064 c-68 -87 44 -199 124 -124 36 34 36 100 -1 129 -39 31 -97 28 -123 -5z"/><path d="M2550 2585 l-55 -55 198 -198 197 -197 -197 -197 -197 -197 54 -50 c30 -28 57 -51 60 -51 3 0 116 111 253 248 l247 247 -253 253 -252 252 -55 -55z"/><path d="M3147 1823 c-3 -5 -4 -39 -4 -78 2 -70 2 -70 32 -69 17 0 146 1 288 2 l257 2 0 75 0 75 -284 0 c-157 0 -287 -3 -289 -7z"/></g></svg>
-  </template>
+  <template id="logo"><svg viewBox="0 0 372 329" fill="currentColor" aria-hidden="true"><g transform="translate(0,329) scale(0.1,-0.1)"><path d="M2473 3276 c-144 -28 -283 -85 -414 -172 -76 -50 -207 -184 -262 -267 -168 -254 -211 -576 -116 -868 24 -75 98 -225 142 -288 24 -36 27 -43 11 -36 -10 4 -91 33 -179 64 -88 32 -188 72 -223 91 -105 56 -206 169 -295 331 -35 63 -36 68 -30 142 7 86 -13 187 -53 272 -27 56 -109 165 -124 165 -6 0 -39 -29 -74 -65 -64 -65 -119 -156 -141 -229 -11 -39 -13 -40 -75 -52 -153 -32 -267 -87 -363 -177 -66 -62 -277 -355 -277 -385 0 -8 21 -45 46 -83 79 -119 169 -166 385 -204 79 -13 103 -22 134 -48 70 -57 136 -253 157 -462 18 -189 -7 -497 -55 -680 -12 -46 -16 -50 -52 -59 -27 -6 -56 -25 -90 -60 -53 -53 -75 -103 -75 -170 0 -36 0 -36 165 -36 191 0 213 6 268 71 21 24 87 142 146 262 107 215 109 218 116 180 9 -48 76 -194 98 -212 23 -19 21 -31 -5 -31 -40 0 -123 -46 -156 -86 -32 -39 -62 -116 -62 -161 0 -24 0 -24 573 -21 555 4 575 5 672 27 393 91 654 283 796 586 60 128 82 235 82 395 0 140 -13 219 -54 329 -27 74 -71 161 -80 161 -10 0 -79 -40 -79 -46 0 -3 13 -31 30 -64 16 -32 42 -99 56 -147 23 -76 27 -107 27 -223 0 -136 -10 -198 -50 -310 -94 -257 -329 -461 -640 -553 -51 -15 -51 -15 -26 21 118 172 178 421 153 628 -24 191 -84 347 -191 497 -31 44 -120 143 -197 221 -178 181 -257 301 -316 480 -92 282 -43 577 134 815 105 141 239 242 403 305 141 54 238 70 387 63 187 -8 329 -55 485 -160 209 -141 362 -406 382 -659 6 -78 6 -78 54 -78 49 0 49 0 49 50 0 106 -40 259 -101 382 -59 121 -106 186 -199 279 -132 130 -277 213 -457 260 -102 27 -336 35 -440 15z m-1520 -753 c43 -80 60 -166 52 -261 -6 -83 -6 -83 41 -170 85 -158 162 -256 255 -326 74 -56 151 -92 309 -146 378 -128 570 -276 689 -532 115 -245 115 -516 -1 -755 -48 -100 -99 -159 -169 -198 -54 -30 -54 -30 -419 -33 -201 -2 -412 -2 -470 0 -105 3 -105 3 -66 33 39 30 41 30 190 35 130 4 151 7 154 21 2 11 -17 29 -57 54 -167 101 -244 258 -219 449 18 131 114 257 245 319 61 29 78 32 168 34 108 1 113 4 114 64 1 34 -16 39 -135 39 -135 0 -235 -35 -342 -119 -60 -48 -141 -158 -170 -233 -11 -29 -37 -96 -58 -148 -57 -148 -231 -491 -265 -522 -28 -27 -34 -28 -129 -28 -55 0 -100 4 -100 9 0 22 63 61 99 61 20 0 44 6 53 13 46 36 108 424 108 671 0 270 -71 550 -167 656 -61 68 -101 87 -240 110 -145 24 -228 61 -272 122 -17 23 -31 48 -31 55 0 15 72 126 155 238 90 122 224 200 398 231 51 9 97 18 103 19 6 2 15 21 19 42 11 60 50 149 86 198 19 24 37 45 40 45 3 0 17 -21 32 -47z"/><path d="M481 2064 c-68 -87 44 -199 124 -124 36 34 36 100 -1 129 -39 31 -97 28 -123 -5z"/><path d="M2550 2585 l-55 -55 198 -198 197 -197 -197 -197 -197 -197 54 -50 c30 -28 57 -51 60 -51 3 0 116 111 253 248 l247 247 -253 253 -252 252 -55 -55z"/><path d="M3147 1823 c-3 -5 -4 -39 -4 -78 2 -70 2 -70 32 -69 17 0 146 1 288 2 l257 2 0 75 0 75 -284 0 c-157 0 -287 -3 -289 -7z"/></g></svg></template>
 
   <nav class="nav" id="nav">
     <div class="wrap nav-in">
@@ -158,75 +171,91 @@
       <p class="sub">Un cliente SSH de escritorio nativo y bonito. Terminal real, hosts con grupos, claves, jump hosts y SFTP con edición — todo en una app liviana.</p>
       <div class="hero-cta">
         <a class="btn btn-primary btn-lg" href="#download">Descargar gratis</a>
-        <a class="tlink" href="https://github.com/chefibecerra/ratatoskr" target="_blank" rel="noopener">
-          Ver en GitHub
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
-        </a>
+        <a class="tlink" href="https://github.com/chefibecerra/ratatoskr" target="_blank" rel="noopener">Ver en GitHub
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg></a>
       </div>
 
-      <div class="term reveal">
-        <div class="term-bar">
-          <span class="d r"></span><span class="d y"></span><span class="d g"></span>
-          <span class="term-title">chef — ratatoskr — ssh</span>
-        </div>
-        <div class="term-body">
-<div class="ln"><span class="g">chef@mac</span><span class="w">:</span><span class="b">~</span><span class="w">$ </span><span class="a">ssh prod-db</span></div>
-<div class="ln"><span class="m"># saltando por bastion.empresa.com → 10.0.0.12</span></div>
+      <!-- Mockup de la app real -->
+      <div class="shot">
+        <div class="app">
+          <aside class="side">
+            <div class="side-head">
+              <span class="tl"><i class="r"></i><i class="y"></i><i class="g"></i></span>
+              <span class="lg"></span>
+            </div>
+            <div class="seg"><span class="on">Hosts</span><span>Claves</span></div>
+            <div class="search">⌕ Buscar host…</div>
+            <div class="hosts">
+              <div class="hc sel"><span class="av" style="background:#e0a868">P</span><span class="t"><b>Producción</b><small>deploy@app.example.com</small></span></div>
+              <div class="hc"><span class="av" style="background:#5fd39a">S</span><span class="t"><b>Staging</b><small>admin@staging.example.com</small></span></div>
+              <div class="hc"><span class="av" style="background:#7fb4f5">B</span><span class="t"><b>Base de datos</b><small>root@db.example.com</small></span></div>
+              <div class="hc"><span class="av" style="background:#c9a2f5">N</span><span class="t"><b>NAS backups</b><small>backup@nas.example.com</small></span></div>
+            </div>
+            <div class="side-foot"><span class="newbtn">+ Nuevo host</span></div>
+          </aside>
+          <div class="main">
+            <div class="tabs">
+              <span class="tab on"><i class="dotg"></i> Producción</span>
+              <span class="files">▸ Archivos</span>
+            </div>
+            <div class="term">
+<div class="ln"><span class="g">deploy@mac</span><span class="w">:</span><span class="b">~</span><span class="w">$ </span><span class="a">ssh produccion</span></div>
+<div class="ln"><span class="m"># saltando por bastion.example.com → app.example.com</span></div>
 <div class="ln"><span class="g">✓</span><span class="w"> túnel establecido · PTY xterm-256color</span></div>
-<div class="ln"><span class="a">root@prod-db</span><span class="w">:</span><span class="b">/var/www</span><span class="w">$ </span><span class="w">systemctl status nginx</span></div>
+<div class="ln"><span class="a">deploy@produccion</span><span class="w">:</span><span class="b">/var/www</span><span class="w">$ </span><span class="w">systemctl status nginx</span></div>
 <div class="ln"><span class="g">●</span><span class="w"> nginx.service — </span><span class="g">active (running)</span></div>
-<div class="ln"><span class="a">root@prod-db</span><span class="w">:</span><span class="b">/var/www</span><span class="w">$ </span><span class="cur"></span></div>
+<div class="ln"><span class="m">  since Wed 2026-02-04 · 3 días</span></div>
+<div class="ln"><span class="a">deploy@produccion</span><span class="w">:</span><span class="b">/var/www</span><span class="w">$ </span><span class="cur"></span></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </header>
 
-  <section id="features" class="wrap">
-    <div class="center reveal">
-      <div class="eyebrow">Características</div>
-      <h2 class="h2">Todo lo que esperas de un cliente SSH serio.</h2>
-      <p class="lead">Sin ruido, sin fricción. Rápido y nativo, hecho en Rust con Tauri.</p>
-    </div>
-    <div class="grid">
-      <div class="card reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg></div><h3>Terminal SSH real</h3><p>PTY interactivo con render acelerado por WebGL (xterm.js). Fluido de verdad.</p></div>
-      <div class="card reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg></div><h3>Hosts con grupos</h3><p>Guarda tus servidores, organízalos por grupos y conéctate con un clic.</p></div>
-      <div class="card reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.5 12.5 7-7M18 4l2 2M15 7l2 2"/></svg></div><h3>Vault de claves</h3><p>Guarda tus claves privadas (pegadas o por ruta) y autentícate sin contraseña.</p></div>
-      <div class="card reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M5 8v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M12 12v4"/></svg></div><h3>Jump hosts</h3><p>Conéctate a través de uno o varios bastiones encadenados, sin configurar nada raro.</p></div>
-      <div class="card reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z"/><path d="M12 11v5m-2.5-2.5h5"/></svg></div><h3>SFTP con edición</h3><p>Explora, sube y baja archivos, y edita texto remoto al vuelo sin salir de la app.</p></div>
-      <div class="card reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>Temas y atajos</h3><p>Siete temas, fuente y cursor a tu gusto, y atajos de teclado para ir rápido.</p></div>
-    </div>
-  </section>
-
-  <section class="wrap">
-    <div class="center reveal">
-      <div class="eyebrow">Cómo funciona</div>
-      <h2 class="h2">De cero a conectado en segundos.</h2>
-    </div>
-    <div class="steps">
-      <div class="step reveal"><div class="n">01</div><h3>Agrega un host</h3><p>Nombre, usuario y contraseña o clave. Agrúpalo si quieres.</p></div>
-      <div class="step reveal"><div class="n">02</div><h3>Conéctate</h3><p>Un clic en la tarjeta. Jump hosts y passphrase se resuelven solos.</p></div>
-      <div class="step reveal"><div class="n">03</div><h3>Trabaja</h3><p>Terminal viva, archivos por SFTP y varias sesiones en pestañas.</p></div>
+  <section id="features">
+    <div class="wrap">
+      <div class="center reveal">
+        <div class="eyebrow">Características</div>
+        <h2 class="h2">Todo lo que esperas de un cliente SSH serio.</h2>
+        <p class="lead">Sin ruido, sin fricción. Rápido y nativo, hecho en Rust con Tauri.</p>
+      </div>
+      <div class="grid">
+        <div class="card reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg></div><h3>Terminal SSH real</h3><p>PTY interactivo con render acelerado por WebGL (xterm.js). Fluido de verdad.</p></div>
+        <div class="card reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></svg></div><h3>Hosts con grupos</h3><p>Guarda tus servidores, organízalos por grupos y conéctate con un clic.</p></div>
+        <div class="card reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="m10.5 12.5 7-7M18 4l2 2M15 7l2 2"/></svg></div><h3>Vault de claves</h3><p>Guarda tus claves privadas (pegadas o por ruta) y autentícate sin contraseña.</p></div>
+        <div class="card reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M5 8v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M12 12v4"/></svg></div><h3>Jump hosts</h3><p>Conéctate a través de uno o varios bastiones encadenados, sin configurar nada raro.</p></div>
+        <div class="card reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z"/><path d="M12 11v5m-2.5-2.5h5"/></svg></div><h3>SFTP con edición</h3><p>Explora, sube y baja archivos, y edita texto remoto al vuelo sin salir de la app.</p></div>
+        <div class="card reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>Temas y atajos</h3><p>Siete temas, fuente y cursor a tu gusto, y atajos de teclado para ir rápido.</p></div>
+      </div>
     </div>
   </section>
 
-  <section class="wrap" id="download">
-    <div class="dl reveal">
-      <div class="hero-mark lg" style="width:48px;height:48px;margin-bottom:22px;"></div>
-      <h2>Descarga Ratatoskr</h2>
-      <p>Gratis y de código abierto · macOS, Windows y Linux</p>
-      <div class="os">
-        <a href="https://github.com/chefibecerra/ratatoskr/releases/latest" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.3 12.6c0-2 1.6-3 1.7-3-1-1.4-2.4-1.6-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7-1.3 0-2.6.8-3.2 2-1.4 2.4-.4 6 1 8 .7 1 1.4 2 2.4 2 1 0 1.3-.6 2.5-.6s1.5.6 2.5.6 1.7-1 2.3-2c.7-1.1 1-2.2 1-2.3 0 0-2-.8-2.2-3.1zM14.6 6.3c.5-.6.9-1.5.8-2.3-.8 0-1.7.5-2.2 1.1-.5.6-.9 1.4-.8 2.3.9.1 1.7-.4 2.2-1.1z"/></svg>
-          macOS
-        </a>
-        <a href="https://github.com/chefibecerra/ratatoskr/releases/latest" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5 10.2 4.5v6.8H3zM10.2 12.1v6.9L3 18V12.1zM11.2 4.3 21 3v8.3h-9.8zM21 12.1V21l-9.8-1.3v-7.6z"/></svg>
-          Windows
-        </a>
-        <a href="https://github.com/chefibecerra/ratatoskr/releases/latest" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-2 0-3 1.7-3 3.6 0 1.3.1 2.3-.6 3.4C7.3 10.6 6 12 6 14.4c0 .8.2 1.4.5 2-.6.4-1 .9-1 1.6 0 .4.2.8.2 1.1 0 .9-1 1-1 1.9 0 1 1.4 1.2 2.7 1.2 1.1 0 2-.4 2.4-1 .4 0 .9-.1 1.5-.1s1.1 0 1.5.1c.4.6 1.3 1 2.4 1 1.3 0 2.7-.2 2.7-1.2 0-.9-1-1-1-1.9 0-.3.2-.7.2-1.1 0-.7-.4-1.2-1-1.6.3-.6.5-1.2.5-2 0-2.4-1.3-3.8-2.4-5.4-.7-1.1-.6-2.1-.6-3.4C15 3.7 14 2 12 2z"/></svg>
-          Linux
-        </a>
+  <section>
+    <div class="wrap">
+      <div class="center reveal">
+        <div class="eyebrow">Cómo funciona</div>
+        <h2 class="h2">De cero a conectado en segundos.</h2>
+      </div>
+      <div class="steps">
+        <div class="step reveal"><div class="n">01</div><h3>Agrega un host</h3><p>Nombre, usuario y contraseña o clave. Agrúpalo si quieres.</p></div>
+        <div class="step reveal"><div class="n">02</div><h3>Conéctate</h3><p>Un clic en la tarjeta. Jump hosts y passphrase se resuelven solos.</p></div>
+        <div class="step reveal"><div class="n">03</div><h3>Trabaja</h3><p>Terminal viva, archivos por SFTP y varias sesiones en pestañas.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <div class="dl reveal">
+        <div class="hero-mark lg"></div>
+        <h2>Descarga Ratatoskr</h2>
+        <p>Gratis y de código abierto · macOS, Windows y Linux</p>
+        <div class="os">
+          <a href="https://github.com/chefibecerra/ratatoskr/releases/latest" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.3 12.6c0-2 1.6-3 1.7-3-1-1.4-2.4-1.6-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7-1.3 0-2.6.8-3.2 2-1.4 2.4-.4 6 1 8 .7 1 1.4 2 2.4 2 1 0 1.3-.6 2.5-.6s1.5.6 2.5.6 1.7-1 2.3-2c.7-1.1 1-2.2 1-2.3 0 0-2-.8-2.2-3.1zM14.6 6.3c.5-.6.9-1.5.8-2.3-.8 0-1.7.5-2.2 1.1-.5.6-.9 1.4-.8 2.3.9.1 1.7-.4 2.2-1.1z"/></svg>macOS</a>
+          <a href="https://github.com/chefibecerra/ratatoskr/releases/latest" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5 10.2 4.5v6.8H3zM10.2 12.1v6.9L3 18V12.1zM11.2 4.3 21 3v8.3h-9.8zM21 12.1V21l-9.8-1.3v-7.6z"/></svg>Windows</a>
+          <a href="https://github.com/chefibecerra/ratatoskr/releases/latest" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c-2 0-3 1.7-3 3.6 0 1.3.1 2.3-.6 3.4C7.3 10.6 6 12 6 14.4c0 .8.2 1.4.5 2-.6.4-1 .9-1 1.6 0 .4.2.8.2 1.1 0 .9-1 1-1 1.9 0 1 1.4 1.2 2.7 1.2 1.1 0 2-.4 2.4-1 .4 0 .9-.1 1.5-.1s1.1 0 1.5.1c.4.6 1.3 1 2.4 1 1.3 0 2.7-.2 2.7-1.2 0-.9-1-1-1-1.9 0-.3.2-.7.2-1.1 0-.7-.4-1.2-1-1.6.3-.6.5-1.2.5-2 0-2.4-1.3-3.8-2.4-5.4-.7-1.1-.6-2.1-.6-3.4C15 3.7 14 2 12 2z"/></svg>Linux</a>
+        </div>
       </div>
     </div>
   </section>
@@ -240,19 +269,21 @@
   </footer>
 
   <script>
-    // inyecta el logo del <template> en cada .lg
-    const svg = document.getElementById('logo').content.firstElementChild;
-    document.querySelectorAll('.lg').forEach(el => el.appendChild(svg.cloneNode(true)));
+    const tpl = document.getElementById('logo').content.firstElementChild;
+    document.querySelectorAll('.lg').forEach(el => el.appendChild(tpl.cloneNode(true)));
 
-    // nav blur al hacer scroll
     const nav = document.getElementById('nav');
     const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
     onScroll(); window.addEventListener('scroll', onScroll, { passive: true });
 
-    // reveal al entrar en viewport
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e, i) => { if (e.isIntersecting) { setTimeout(() => e.target.classList.add('in'), (i % 3) * 70); io.unobserve(e.target); } });
-    }, { threshold: 0.14 });
+    // reveal escalonado entre hermanos (sutil y rápido)
+    const io = new IntersectionObserver((es) => es.forEach(e => {
+      if (!e.isIntersecting) return;
+      const sibs = [...e.target.parentElement.children].filter(c => c.classList.contains('reveal'));
+      const i = Math.max(0, sibs.indexOf(e.target));
+      setTimeout(() => e.target.classList.add('in'), i * 55);
+      io.unobserve(e.target);
+    }), { threshold: 0.12 });
     document.querySelectorAll('.reveal').forEach(el => io.observe(el));
   </script>
 </body>
